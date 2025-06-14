@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sparkles, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,20 @@ export default function AIGenerator() {
     }
   };
 
+  // Helper function to safely get model from generation record
+  const getModelFromGeneration = (generation: any) => {
+    // First try to get from the model column (new structure)
+    if ((generation as any).model) {
+      return (generation as any).model;
+    }
+    // Fallback to result_data.model (old structure)
+    if (generation.result_data && typeof generation.result_data === 'object' && generation.result_data !== null) {
+      const resultData = generation.result_data as { model?: string };
+      return resultData.model || "未知";
+    }
+    return "未知";
+  };
+
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto mt-4 gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -269,7 +284,7 @@ export default function AIGenerator() {
                     <span className="font-medium">{generation.generation_type}</span>
                     <span className="text-sm text-gray-500">{new Date(generation.created_at).toLocaleString()}</span>
                   </div>
-                  <div className="text-xs text-sky-700 mb-1">模型: {generation.model || generation.result_data?.model || "未知"}</div>
+                  <div className="text-xs text-sky-700 mb-1">模型: {getModelFromGeneration(generation)}</div>
                   <p className="text-sm text-gray-600 line-clamp-2">{generation.prompt}</p>
                 </div>
               ))}

@@ -14,6 +14,7 @@ export type Database = {
           created_at: string | null
           generation_type: string
           id: string
+          model: string | null
           prompt: string
           resource_id: string | null
           result_data: Json | null
@@ -23,6 +24,7 @@ export type Database = {
           created_at?: string | null
           generation_type: string
           id?: string
+          model?: string | null
           prompt: string
           resource_id?: string | null
           result_data?: Json | null
@@ -32,6 +34,7 @@ export type Database = {
           created_at?: string | null
           generation_type?: string
           id?: string
+          model?: string | null
           prompt?: string
           resource_id?: string | null
           result_data?: Json | null
