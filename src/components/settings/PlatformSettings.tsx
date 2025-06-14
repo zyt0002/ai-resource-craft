@@ -39,15 +39,16 @@ export default function PlatformSettings() {
         .select("value")
         .eq("key", "main")
         .maybeSingle();
-      if (data?.value) {
+      if (data && typeof data.value === "object" && data.value !== null) {
         setSettings({ ...DEFAULT_PLATFORM, ...data.value });
+      } else {
+        setSettings(DEFAULT_PLATFORM);
       }
     }
     fetchSettings();
     // eslint-disable-next-line
   }, []);
 
-  // 保存到 platform_settings
   const handleSave = async () => {
     if (!isAdmin) {
       toast({ title: "无权限", description: "只有管理员可以更改平台设置", variant: "destructive" });
@@ -55,7 +56,6 @@ export default function PlatformSettings() {
     }
     setLoading(true);
     try {
-      // upsert 主配置 key: main
       const { error } = await supabase
         .from("platform_settings")
         .upsert([
@@ -66,7 +66,6 @@ export default function PlatformSettings() {
           }
         ], { onConflict: "key" });
       if (error) throw error;
-
       toast({
         title: "平台设置已保存",
         description: "配置更新成功",
@@ -228,3 +227,4 @@ export default function PlatformSettings() {
   );
 }
 
+// 文件已超过230行，如需进一步优化可考虑拆分子组件提升可维护性。
