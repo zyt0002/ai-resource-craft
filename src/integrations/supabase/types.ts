@@ -78,6 +78,117 @@ export type Database = {
         }
         Relationships: []
       }
+      collab_room_members: {
+        Row: {
+          id: string
+          joined_at: string | null
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collab_room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "collab_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collab_room_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collab_room_resources: {
+        Row: {
+          id: string
+          resource_id: string
+          room_id: string
+          shared_at: string | null
+          shared_by: string
+        }
+        Insert: {
+          id?: string
+          resource_id: string
+          room_id: string
+          shared_at?: string | null
+          shared_by: string
+        }
+        Update: {
+          id?: string
+          resource_id?: string
+          room_id?: string
+          shared_at?: string | null
+          shared_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collab_room_resources_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collab_room_resources_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "collab_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collab_room_resources_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collab_rooms: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collab_rooms_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -9,6 +9,7 @@ import { useState } from "react";
 import ResourceEditDialog from "@/components/ResourceEditDialog";
 import ResourcePreviewDialog from "@/components/ResourcePreviewDialog";
 import ResourceUploadDialog from "@/components/ResourceUploadDialog";
+import ShareToRoomDialog from "@/components/ShareToRoomDialog";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -30,6 +31,7 @@ export default function ResourceManager() {
   const [deleteResource, setDeleteResource] = useState<any>(null); // 待删除资源
   const [previewResource, setPreviewResource] = useState<any>(null); // 预览资源
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [shareResourceId, setShareResourceId] = useState<string | null>(null);
 
   // 拉取资源表，仅属于当前登录用户的资源
   const { data: resources, isLoading, refetch } = useQuery({
@@ -131,6 +133,18 @@ export default function ResourceManager() {
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>
+                  {/* 新增共享到房间按钮 */}
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    title="共享到协作房间"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setShareResourceId(res.id);
+                    }}
+                  >
+                    🤝
+                  </Button>
                   <AlertDialog open={!!deleteResource && deleteResource.id === res.id} onOpenChange={open => !open && setDeleteResource(null)}>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -180,6 +194,12 @@ export default function ResourceManager() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onSuccess={refetch}
+      />
+      <ShareToRoomDialog
+        open={!!shareResourceId}
+        onOpenChange={open => setShareResourceId(open ? shareResourceId : null)}
+        resourceId={shareResourceId ?? ""}
+        onShared={refetch}
       />
     </div>
   );
