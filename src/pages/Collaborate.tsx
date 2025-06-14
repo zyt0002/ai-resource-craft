@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Users, Plus } from "lucide-react";
 import CollabRoomList from "@/components/CollabRoomList";
@@ -16,10 +17,14 @@ export default function Collaborate() {
       toast({ title: "请输入房间名称" });
       return;
     }
+    if (!profile?.id) {
+      toast({ title: "请先登录" });
+      return;
+    }
     setCreating(true);
     const { data, error } = await supabase.from("collab_rooms").insert({
       name: roomName,
-      owner_id: profile?.id,
+      owner_id: profile.id, // profile.id 必须有值
     }).select();
     setCreating(false);
     if (error) {
@@ -31,7 +36,7 @@ export default function Collaborate() {
       if (data && data[0]) {
         await supabase.from("collab_room_members").insert({
           room_id: data[0].id,
-          user_id: profile?.id,
+          user_id: profile.id,
         });
       }
     }
