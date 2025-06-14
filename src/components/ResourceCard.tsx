@@ -11,11 +11,11 @@ type Resource = {
 };
 
 export function ResourceCard({ resource }: { resource: Resource }) {
-  let icon = File;
-  if (resource.type === "document") icon = FileText;
-  if (resource.type === "image") icon = FileImage;
-  if (resource.type === "video") icon = FileVideo2;
-  if (resource.type === "audio") icon = FileAudio2;
+  let Icon = File;
+  if (resource.type === "document") Icon = FileText;
+  if (resource.type === "image") Icon = FileImage;
+  if (resource.type === "video") Icon = FileVideo2;
+  if (resource.type === "audio") Icon = FileAudio2;
 
   return (
     <div
@@ -28,7 +28,7 @@ export function ResourceCard({ resource }: { resource: Resource }) {
           {resource.type === "image" && resource.previewUrl ? (
             <img src={resource.previewUrl} alt={resource.title} className="w-8 h-8 object-cover rounded" />
           ) : (
-            <icon className="w-8 h-8" />
+            <Icon className="w-8 h-8" />
           )}
         </div>
         <div className="flex-1">
@@ -42,3 +42,4 @@ export function ResourceCard({ resource }: { resource: Resource }) {
     </div>
   );
 }
+
