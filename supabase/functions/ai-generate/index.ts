@@ -57,6 +57,21 @@ async function imageToBase64(fileUrl: string): Promise<string | null> {
   }
 }
 
+// 将图片 URL 下载并转为 base64
+async function fetchImageBase64FromUrl(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const buf = await resp.arrayBuffer();
+    const mime = resp.headers.get('content-type') || 'image/jpeg';
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    return `data:${mime};base64,${b64}`;
+  } catch (e) {
+    console.error('下载图片转 base64 失败:', e);
+    return null;
+  }
+}
+
 // 从URL获取文件内容
 async function getFileContent(fileUrl: string): Promise<string> {
   try {
@@ -145,26 +160,40 @@ serve(async (req) => {
         console.error('图片生成API返回异常:', resp.status, await resp.text());
         throw new Error(`图片生成失败: ${resp.statusText}`);
       }
+
       const imageResData = await resp.json();
 
-      // 不同模型结构稍有不同，Kwai/FLUX都返回data:[{b64_json:...}]
-      const imageData =
-        imageResData?.data?.[0]?.b64_json
-        ? `data:image/png;base64,${imageResData.data[0].b64_json}`
-        : null;
+      let imageBase64: string | null = null;
 
-      if (!imageData) {
+      // 处理所有可能返回结构优先级
+      if (imageResData?.data?.[0]?.b64_json) {
+        imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
+        console.log('直接获取到 b64_json');
+      } else if (imageResData?.data?.[0]?.url) {
+        // 新版 API 形式
+        console.log('通过 data[0].url 获取图片');
+        imageBase64 = await fetchImageBase64FromUrl(imageResData.data[0].url);
+      } else if (imageResData?.images?.[0]?.url) {
+        // 某些模型会返回 images 字段
+        console.log('通过 images[0].url 获取图片');
+        imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
+      } else {
+        // 均无结果
+        console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
+      }
+
+      if (!imageBase64) {
         throw new Error("图片API未返回有效图片。返回内容: " + JSON.stringify(imageResData));
       }
 
-      console.log('图片生成成功，返回base64长度:', imageData.length);
+      console.log('图片生成成功，返回base64长度:', imageBase64.length);
 
       return new Response(JSON.stringify({
         success: true,
         model: imageModel,
         generationType,
-        imageBase64: imageData,
-        content: "", // 不返回文本内容
+        imageBase64: imageBase64,
+        content: "",
         fileProcessed: false,
         multimodalUsed: false
       }), {
