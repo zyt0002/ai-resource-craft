@@ -104,6 +104,33 @@ export default function AIGenerator() {
       return;
     }
 
+    let type: "document" | "image" | "courseware" = "courseware";
+    let file_type = undefined;
+
+    if (generatedImageBase64) {
+      // 图片 AI 生成
+      type = "image";
+      file_type = "image/png";
+    } else if (generatedContent) {
+      // 文字型内容，判断 json 还是普通文本
+      type = "document";
+      // 如果内容能被安全解析为JSON，且内容看起来像 JSON，则保存为 application/json
+      try {
+        const testContent = generatedContent.trim();
+        if (
+          (testContent.startsWith("{") && testContent.endsWith("}")) ||
+          (testContent.startsWith("[") && testContent.endsWith("]"))
+        ) {
+          JSON.parse(testContent); // 如果能解析，不报错则设为 json
+          file_type = "application/json";
+        } else {
+          file_type = "text/plain";
+        }
+      } catch {
+        file_type = "text/plain";
+      }
+    }
+
     try {
       const { error } = await supabase
         .from('resources')
@@ -111,10 +138,11 @@ export default function AIGenerator() {
           title,
           description,
           content: generatedContent || null,
-          type: "courseware" as any,
+          type: type,
           status: 'draft',
           owner_id: profile?.id,
           thumbnail_url: generatedImageBase64 ? generatedImageBase64 : undefined,
+          file_type: file_type,
         });
       if (error) throw error;
 
