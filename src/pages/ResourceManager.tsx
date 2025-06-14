@@ -23,6 +23,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
+// Add the Resource type to match usage with content field
+type Resource = {
+  id: string;
+  title: string;
+  type: string;
+  updatedAt?: string;
+  previewUrl?: string;
+  file_path?: string;
+  file_type?: string;
+  content?: string; // <-- Add this field so it's allowed
+};
+
 export default function ResourceManager() {
   const { profile } = useAuth();
   const isAdmin = useIsAdmin();
