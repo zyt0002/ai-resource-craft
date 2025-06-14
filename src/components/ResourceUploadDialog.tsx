@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -41,9 +40,16 @@ export default function ResourceUploadDialog({
     { value: "audio", label: "音频" },
   ];
 
-  const handleFileUpload = (url: string, fileName: string, fileType: string, fileObj?: File) => {
-    setSelectedFile({ url, name: fileName, type: fileType, file: fileObj ?? (undefined as any) });
-    if (!title) setTitle(fileName.replace(/\.[^/.]+$/, "")); // 默认用文件名作为标题
+  // 使用 useUploadToSupabase 上传文件时，提前取到公开链接
+  const handleFileUpload = async (url: string, fileName: string, fileType: string, fileObj?: File) => {
+    // 1. 取得 supabase 存储公开 url
+    let publicUrl = url;
+    if (fileObj) {
+      const { data } = supabase.storage.from("user-uploads").getPublicUrl(fileName);
+      if (data?.publicUrl) publicUrl = data.publicUrl;
+    }
+    setSelectedFile({ url: publicUrl, name: fileName, type: fileType, file: fileObj ?? (undefined as any) });
+    if (!title) setTitle(fileName.replace(/\.[^/.]+$/, ""));
     if (!type && fileType) {
       if (fileType.startsWith("image/")) setType("image");
       else if (fileType.startsWith("video/")) setType("video");
@@ -64,15 +70,19 @@ export default function ResourceUploadDialog({
     }
     setUploading(true);
 
-    // 类型断言保证 type 字段正确，补充 owner_id 字段
+    // 获取公开URL，始终写入 thumbnail_url
+    const filePublicUrl =
+      selectedFile.url.startsWith("http") ? selectedFile.url :
+      supabase.storage.from("user-uploads").getPublicUrl(selectedFile.name).data?.publicUrl ?? "";
+
     const insertObj: TablesInsert<"resources"> = {
       title: title.trim() || selectedFile.name,
       type: type,
-      file_path: selectedFile.url,
+      file_path: selectedFile.url,     // 保持存储内部路径
       file_type: selectedFile.type,
-      thumbnail_url: type === "image" ? selectedFile.url : null,
-      owner_id: profile.id // ★★★ RLS 关键，必须传入
-      // 其他可选字段按需添加
+      thumbnail_url: filePublicUrl,    // 永远写公网可访问URL
+      owner_id: profile.id
+      // 可选: 其它字段
     };
 
     const { error } = await supabase.from("resources").insert(insertObj);
@@ -145,4 +155,3 @@ export default function ResourceUploadDialog({
     </Dialog>
   );
 }
-
