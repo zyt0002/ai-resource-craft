@@ -4,7 +4,7 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import FilePreview from "@/components/FilePreview";
-import { Upload, FileText, AlertCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUploadToSupabase } from "@/hooks/useUploadToSupabase";
 
@@ -18,12 +18,13 @@ interface FileUploadComponentProps {
 
 export default function FileUploadComponent({
   onFileUpload,
-  maxFiles = 5,
+  maxFiles = 1,
   maxSize = 10 * 1024 * 1024, // 10MB
   acceptedTypes = ['.pdf', '.docx', '.txt', '.md', '.jpg', '.jpeg', '.png', '.gif', '.mp3', '.wav', '.mp4'],
-  multiple = true
+  multiple = false
 }: FileUploadComponentProps) {
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<{url: string, name: string, type: string}[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { uploadFile } = useUploadToSupabase();
@@ -93,6 +94,10 @@ export default function FileUploadComponent({
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) {
       toast({
@@ -106,18 +111,29 @@ export default function FileUploadComponent({
     setUploading(true);
     
     try {
+      const newUploadedFiles = [];
       for (const file of files) {
         const fileUrl = await uploadFile(file);
-        if (fileUrl && onFileUpload) {
-          onFileUpload(fileUrl, file.name, file.type);
+        if (fileUrl) {
+          const uploadedFile = { url: fileUrl, name: file.name, type: file.type };
+          newUploadedFiles.push(uploadedFile);
+          
+          // 通知父组件文件已上传
+          if (onFileUpload) {
+            onFileUpload(fileUrl, file.name, file.type);
+          }
         }
       }
+      
+      // 将新上传的文件添加到已上传列表
+      setUploadedFiles([...uploadedFiles, ...newUploadedFiles]);
       
       toast({
         title: "上传成功",
         description: `成功上传 ${files.length} 个文件`,
       });
       
+      // 清空待上传文件列表
       setFiles([]);
     } catch (error) {
       console.error('文件上传失败:', error);
@@ -143,6 +159,37 @@ export default function FileUploadComponent({
     <div className="space-y-4">
       <Card>
         <CardContent className="p-6">
+          {/* 已上传文件显示区域 */}
+          {uploadedFiles.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <h4 className="font-medium text-green-600">已上传的文件 ({uploadedFiles.length})</h4>
+              </div>
+              <div className="space-y-2">
+                {uploadedFiles.map((file, index) => (
+                  <div key={`uploaded-${index}`} className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">{file.name}</p>
+                        <p className="text-xs text-green-600">{file.type}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeUploadedFile(index)}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      移除
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
@@ -170,7 +217,7 @@ export default function FileUploadComponent({
           {files.length > 0 && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium">已选择的文件 ({files.length})</h4>
+                <h4 className="font-medium">待上传的文件 ({files.length})</h4>
                 <Button
                   onClick={handleUpload}
                   disabled={uploading}
@@ -198,10 +245,10 @@ export default function FileUploadComponent({
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium mb-1">上传说明：</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>支持同时上传多个文件（最多{maxFiles}个）</li>
+                  <li>上传后的文件会保持显示，直到您手动移除</li>
                   <li>单个文件大小不超过 {formatFileSize(maxSize)}</li>
-                  <li>上传的文件会自动保存到云存储</li>
-                  <li>文件上传后可在资源管理中查看和管理</li>
+                  <li>上传的文件会自动用于AI生成时的分析</li>
+                  <li>您可以继续上传其他文件或在生成前移除不需要的文件</li>
                 </ul>
               </div>
             </div>

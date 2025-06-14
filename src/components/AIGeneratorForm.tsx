@@ -68,6 +68,11 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     }
   };
 
+  const handleFileUpload = (url: string, fileName: string, fileType: string) => {
+    setUploadedFileUrl(url);
+    setUploadedFileName(fileName);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -94,9 +99,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
               <SelectValue placeholder="请选择图片生成模型" />
             </SelectTrigger>
             <SelectContent>
-              {imageModelList.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
+              <SelectItem value="Kwai-Kolors/Kolors">Kwai-Kolors/Kolors</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -108,20 +111,36 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
               <SelectValue placeholder="请选择模型" />
             </SelectTrigger>
             <SelectContent>
-              {modelList.map((m) => (
-                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-              ))}
+              <SelectItem value="Qwen/Qwen2.5-7B-Instruct">Qwen/Qwen2.5-7B-Instruct</SelectItem>
+              <SelectItem value="Tongyi-Zhiwen/QwenLong-L1-32B">Tongyi-Zhiwen/QwenLong-L1-32B</SelectItem>
+              <SelectItem value="Qwen/Qwen3-32B">Qwen/Qwen3-32B</SelectItem>
+              <SelectItem value="THUDM/GLM-Z1-32B-0414">THUDM/GLM-Z1-32B-0414</SelectItem>
+              <SelectItem value="Qwen/Qwen2.5-VL-32B-Instruct">Qwen/Qwen2.5-VL-32B-Instruct</SelectItem>
+              <SelectItem value="Qwen/QwQ-32B">Qwen/QwQ-32B</SelectItem>
+              <SelectItem value="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B">deepseek-ai/DeepSeek-R1-Distill-Qwen-32B</SelectItem>
+              <SelectItem value="Qwen/Qwen2.5-Coder-32B-Instruct">Qwen/Qwen2.5-Coder-32B-Instruct</SelectItem>
+              <SelectItem value="Qwen/Qwen2.5-32B-Instruct">Qwen/Qwen2.5-32B-Instruct</SelectItem>
+              <SelectItem value="THUDM/GLM-4-32B-0414">THUDM/GLM-4-32B-0414</SelectItem>
+              <SelectItem value="THUDM/GLM-Z1-Rumination-32B-0414">THUDM/GLM-Z1-Rumination-32B-0414</SelectItem>
+              <SelectItem value="Qwen/Qwen3-14B">Qwen/Qwen3-14B</SelectItem>
+              <SelectItem value="Qwen/Qwen2.5-14B-Instruct">Qwen/Qwen2.5-14B-Instruct</SelectItem>
+              <SelectItem value="deepseek-ai/DeepSeek-R1-Distill-Qwen-14B">deepseek-ai/DeepSeek-R1-Distill-Qwen-14B</SelectItem>
             </SelectContent>
           </Select>
         </div>
       )}
 
       <FileUploadComponent
-        onFileUpload={(url, fileName, fileType) => {
-          setUploadedFileUrl(url);
-          setUploadedFileName(fileName);
-        }}
+        onFileUpload={handleFileUpload}
+        maxFiles={1}
+        multiple={false}
       />
+
+      {uploadedFileName && (
+        <div className="text-sm text-muted-foreground">
+          当前文件：{uploadedFileName}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="prompt">生成提示</Label>
