@@ -110,6 +110,7 @@ export default function ResourceManager() {
                     previewUrl: res.thumbnail_url,
                     file_path: res.file_path,
                     file_type: res.file_type,
+                    content: res.content, // ✅ 传递本地 content
                   }}
                   onPreview={() => setPreviewResource({
                     id: res.id,
@@ -118,6 +119,7 @@ export default function ResourceManager() {
                     previewUrl: res.thumbnail_url,
                     file_path: res.file_path,
                     file_type: res.file_type,
+                    content: res.content, // ✅ 传递本地 content
                   })}
                 />
                 {isAdmin && (
@@ -189,19 +191,19 @@ export default function ResourceManager() {
         resource={previewResource}
       />
       {isAdmin && (
-        <ResourceUploadDialog
-          open={uploadOpen}
-          onOpenChange={setUploadOpen}
-          onSuccess={refetch}
-        />
-      )}
-      {isAdmin && (
-        <ShareToRoomDialog
-          open={!!shareResourceId}
-          onOpenChange={open => setShareResourceId(open ? shareResourceId : null)}
-          resourceId={shareResourceId ?? ""}
-          onShared={refetch}
-        />
+        <>
+          <ResourceUploadDialog
+            open={uploadOpen}
+            onOpenChange={setUploadOpen}
+            onSuccess={refetch}
+          />
+          <ShareToRoomDialog
+            open={!!shareResourceId}
+            onOpenChange={open => setShareResourceId(open ? shareResourceId : null)}
+            resourceId={shareResourceId ?? ""}
+            onShared={refetch}
+          />
+        </>
       )}
     </div>
   );
