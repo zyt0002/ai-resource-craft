@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,16 +119,11 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
       )}
       
       <FileUploadComponent
-        onFileUploaded={(url, fileName) => {
+        onFileUpload={(url, fileName, fileType) => {
           setUploadedFileUrl(url);
           setUploadedFileName(fileName);
         }}
-        onFileRemoved={() => {
-          setUploadedFileUrl(null);
-          setUploadedFileName(null);
-        }}
-        uploadedFileUrl={uploadedFileUrl}
-        uploadedFileName={uploadedFileName}
+        // Removed incorrect/unsupported props
       />
       
       <div className="space-y-2">
@@ -157,3 +153,4 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     </form>
   );
 }
+
