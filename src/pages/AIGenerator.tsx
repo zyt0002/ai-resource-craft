@@ -56,34 +56,29 @@ export default function AIGenerator() {
     setGeneratedImageBase64(null);
     
     try {
-      console.log('发送生成请求:', data);
+      const formData = new FormData();
+      formData.append('prompt', data.prompt);
+      formData.append('type', data.generationType);
+      formData.append('model', data.model);
+      formData.append('user_id', profile.id);
       
-      const requestData = {
-        prompt: data.prompt,
-        generationType: data.generationType,
-        model: data.model,
-        fileUrl: data.fileUrl,
-      };
+      if (data.fileUrl) {
+        formData.append('file_url', data.fileUrl);
+      }
 
       const response = await fetch('/functions/v1/ai-generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
+        body: formData,
       });
 
-      console.log('API响应状态:', response.status);
-      
       if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        throw new Error('生成失败');
       }
 
       const result = await response.json();
-      console.log('API响应结果:', result);
       
-      if (data.generationType === 'image' && result.imageBase64) {
-        setGeneratedImageBase64(result.imageBase64);
+      if (data.generationType === 'image' && result.image) {
+        setGeneratedImageBase64(result.image);
       } else if (result.content) {
         setGeneratedContent(result.content);
       }
@@ -96,7 +91,7 @@ export default function AIGenerator() {
       console.error('Generation error:', error);
       toast({
         title: "生成失败",
-        description: error instanceof Error ? error.message : "请检查网络连接或稍后重试",
+        description: "请检查网络连接或稍后重试",
         variant: "destructive",
       });
     } finally {

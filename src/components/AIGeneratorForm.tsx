@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,11 +68,9 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     }
   };
 
-  // 只保存文件信息，不触发生成
   const handleFileUpload = (url: string, fileName: string, fileType: string) => {
     setUploadedFileUrl(url);
     setUploadedFileName(fileName);
-    console.log('文件上传完成，已保存文件信息:', { url, fileName, fileType });
   };
 
   return (
