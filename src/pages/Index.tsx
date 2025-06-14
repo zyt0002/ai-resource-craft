@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ResourceCard } from "@/components/ResourceCard";
 import StatsCard from "@/components/StatsCard";
@@ -6,6 +5,13 @@ import SearchAndFilter from "@/components/SearchAndFilter";
 import { Sparkles, FolderKanban, FileText, Image, Users, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import ResourcePreviewDialog from "@/components/ResourcePreviewDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState as useReactState } from "react";
 
 const fakeResources = [
   { id: "1", title: "小学语文PPT范例", type: "document", updatedAt: "2024-06-12", category: "语文" },
@@ -22,6 +28,25 @@ const types = ["document", "image", "audio", "video"];
 export default function Index() {
   const [filteredResources, setFilteredResources] = useState(fakeResources);
   const [searchQuery, setSearchQuery] = useState("");
+  // 新增：动态资源相关状态
+  const { profile } = useAuth();
+  const [previewResource, setPreviewResource] = useReactState<any>(null);
+
+  // 动态资源
+  const { data: myResources, isLoading: myResourcesLoading } = useQuery({
+    queryKey: ["resources_mine", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from("resources")
+        .select("*")
+        .eq("owner_id", profile.id)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.id,
+  });
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -29,32 +54,27 @@ export default function Index() {
       setFilteredResources(fakeResources);
       return;
     }
-    
     const filtered = fakeResources.filter(resource =>
       resource.title.toLowerCase().includes(query.toLowerCase()) ||
-      resource.category.toLowerCase().includes(query.toLowerCase())
+      resource.category?.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredResources(filtered);
   };
 
   const handleFilter = (filters: any) => {
     let filtered = fakeResources;
-    
     if (searchQuery) {
       filtered = filtered.filter(resource =>
         resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        resource.category.toLowerCase().includes(searchQuery.toLowerCase())
+        resource.category?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
     if (filters.category) {
       filtered = filtered.filter(resource => resource.category === filters.category);
     }
-    
     if (filters.type) {
       filtered = filtered.filter(resource => resource.type === filters.type);
     }
-    
     setFilteredResources(filtered);
   };
 
@@ -134,7 +154,7 @@ export default function Index() {
         </Card>
       </div>
 
-      {/* 最近资源部分 */}
+      {/* -------- 静态资源部分保持不变 ---------- */}
       <div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">最近更新的教学资源</h2>
@@ -142,8 +162,6 @@ export default function Index() {
             <a href="/resources">查看全部</a>
           </Button>
         </div>
-        
-        {/* 搜索和过滤 */}
         <div className="mb-6">
           <SearchAndFilter
             onSearch={handleSearch}
@@ -152,8 +170,6 @@ export default function Index() {
             types={types}
           />
         </div>
-
-        {/* 资源列表 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredResources.length > 0 ? (
             filteredResources.map((resource) => (
@@ -169,6 +185,57 @@ export default function Index() {
         </div>
       </div>
 
+      {/* -------- 新增：我的资源(动态) -------- */}
+      <div className="pt-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">我的教学资源</h2>
+        </div>
+        {myResourcesLoading ? (
+          <div className="flex items-center text-muted-foreground py-10 justify-center">
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            加载中...
+          </div>
+        ) : !profile?.id ? (
+          <div className="text-sm text-gray-400 text-center py-6">请登录后查看您的资源</div>
+        ) : (myResources && myResources.length > 0) ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {myResources.map((res: any) => (
+              <ResourceCard
+                key={res.id}
+                resource={{
+                  id: res.id,
+                  title: res.title,
+                  type: res.type,
+                  updatedAt: res.updated_at?.slice(0, 10) || "",
+                  previewUrl: res.thumbnail_url,
+                  file_path: res.file_path,
+                  file_type: res.file_type,
+                }}
+                onPreview={() => setPreviewResource({
+                  id: res.id,
+                  title: res.title,
+                  type: res.type,
+                  previewUrl: res.thumbnail_url,
+                  file_path: res.file_path,
+                  file_type: res.file_type,
+                })}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="col-span-full text-center py-10 text-gray-400">
+            暂无资源，去“资源管理”上传您的第一个资源吧。
+          </div>
+        )}
+      </div>
+      {/* 资源预览弹窗 */}
+      <ResourcePreviewDialog
+        open={!!previewResource}
+        onOpenChange={open => setPreviewResource(open ? previewResource : null)}
+        resource={previewResource}
+      />
+
+      {/* ----------- 其它板块保持不变 ----------- */}
       {/* 使用提示 */}
       <Card>
         <CardHeader>
