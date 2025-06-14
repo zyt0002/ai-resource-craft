@@ -55,17 +55,24 @@ export default function AIGenerator() {
         },
       });
 
+      // Debug: 输出 AI 返回内容
+      console.log("AI raw result:", result);
+
       if (error) throw error;
 
       if (result.success) {
         if (data.generationType === "image" && result.imageBase64) {
           setGeneratedContent(""); // 清空文本
           setGeneratedImageBase64(result.imageBase64);
-        } else {
+        } else if (typeof result.content === "string" && result.content.trim()) {
           setGeneratedContent(result.content);
           setGeneratedImageBase64(null);
+        } else {
+          // 文本内容为空或未返回，清空
+          setGeneratedContent("");
+          setGeneratedImageBase64(null);
         }
-        
+
         // 保存到数据库时也一并存模型信息
         const { error: saveError } = await supabase
           .from('ai_generations')
@@ -99,6 +106,11 @@ export default function AIGenerator() {
   };
 
   const handleSaveAsResource = async () => {
+    // Debug: 打印待保存内容和设置的 content 字段
+    console.log("即将保存的内容：", {
+      title, description, generatedContent, generatedImageBase64
+    });
+
     if (!(generatedContent || generatedImageBase64) || !title.trim()) {
       toast({ title: "请填写标题并生成内容", variant: "destructive" });
       return;
@@ -112,16 +124,14 @@ export default function AIGenerator() {
       type = "image";
       file_type = "image/png";
     } else if (generatedContent) {
-      // 文字型内容，判断 json 还是普通文本
       type = "document";
-      // 如果内容能被安全解析为JSON，且内容看起来像 JSON，则保存为 application/json
       try {
         const testContent = generatedContent.trim();
         if (
           (testContent.startsWith("{") && testContent.endsWith("}")) ||
           (testContent.startsWith("[") && testContent.endsWith("]"))
         ) {
-          JSON.parse(testContent); // 如果能解析，不报错则设为 json
+          JSON.parse(testContent);
           file_type = "application/json";
         } else {
           file_type = "text/plain";
@@ -137,7 +147,7 @@ export default function AIGenerator() {
         .insert({
           title,
           description,
-          content: generatedContent || null,
+          content: generatedContent && generatedContent.trim() ? generatedContent : null,
           type: type,
           status: 'draft',
           owner_id: profile?.id,
