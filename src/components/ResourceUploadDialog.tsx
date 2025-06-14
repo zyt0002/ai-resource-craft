@@ -7,6 +7,7 @@ import FileUploadComponent from "./FileUploadComponent";
 import { useUploadToSupabase } from "@/hooks/useUploadToSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 export default function ResourceUploadDialog({
   open,
@@ -18,7 +19,7 @@ export default function ResourceUploadDialog({
   onSuccess?: () => void;
 }) {
   const [title, setTitle] = useState("");
-  const [type, setType] = useState("document");
+  const [type, setType] = useState<"document" | "audio" | "video" | "image" | "courseware">("document");
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{
     url: string;
@@ -40,7 +41,6 @@ export default function ResourceUploadDialog({
   const handleFileUpload = (url: string, fileName: string, fileType: string, fileObj?: File) => {
     setSelectedFile({ url, name: fileName, type: fileType, file: fileObj ?? (undefined as any) });
     if (!title) setTitle(fileName.replace(/\.[^/.]+$/, "")); // 默认用文件名作为标题
-    // 根据文件类型自动推断 type 字段
     if (!type && fileType) {
       if (fileType.startsWith("image/")) setType("image");
       else if (fileType.startsWith("video/")) setType("video");
@@ -56,14 +56,17 @@ export default function ResourceUploadDialog({
       return;
     }
     setUploading(true);
-    // owner_id 由 supabase row level security 自动写入（要保证登录）
-    const { error } = await supabase.from("resources").insert({
+
+    // 类型断言保证 type 字段正确
+    const insertObj: TablesInsert<"resources"> = {
       title: title.trim() || selectedFile.name,
       type: type,
-      file_path: selectedFile.url, // 可以存储为 publicUrl
+      file_path: selectedFile.url,
       file_type: selectedFile.type,
       thumbnail_url: type === "image" ? selectedFile.url : null,
-    });
+      // 其他可选字段按需添加
+    };
+    const { error } = await supabase.from("resources").insert(insertObj);
     setUploading(false);
     if (error) {
       toast({ title: "资源保存失败", description: error.message, variant: "destructive" });
@@ -114,7 +117,7 @@ export default function ResourceUploadDialog({
             <select
               className="w-full border rounded p-2 text-sm"
               value={type}
-              onChange={e => setType(e.target.value)}
+              onChange={e => setType(e.target.value as typeof type)}
               disabled={uploading}
             >
               {resourceTypes.map(t => (
