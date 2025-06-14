@@ -24,15 +24,6 @@ const supportedModels = [
   "Qwen/Qwen2.5-14B-Instruct",
   "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
   "Kwai-Kolors/Kolors",
-  "FLUX.1 Schnell",
-  "SD 3.5 Large",
-  "black-forest-labs/FLUX.1-schnell",
-];
-
-const fluxLikeModels = [
-  "FLUX.1 Schnell",
-  "black-forest-labs/FLUX.1-schnell",
-  "SD 3.5 Large",
 ];
 
 const multimodalModels = [
@@ -133,15 +124,7 @@ serve(async (req) => {
 
     // ======================= 图片生成功能 ======================
     if (generationType === "image") {
-      let imageModel = "black-forest-labs/FLUX.1-schnell";
-      if (model && fluxLikeModels.includes(model)) {
-        imageModel = "black-forest-labs/FLUX.1-schnell";
-      } else if (model && model === "Kwai-Kolors/Kolors") {
-        imageModel = "Kwai-Kolors/Kolors";
-      } else if (model && model === "SD 3.5 Large") {
-        imageModel = "SD 3.5 Large";
-      }
-
+      const imageModel = "Kwai-Kolors/Kolors";
       console.log(`[AI-Generate] 使用图片生成功能: ${imageModel}`);
       const resp = await fetch("https://api.siliconflow.cn/v1/images/generations", {
         method: "POST",
@@ -167,7 +150,7 @@ serve(async (req) => {
 
       let imageBase64: string | null = null;
 
-      // 处理所有可能返回结构优先级
+      // 只关注 data[0].b64_json 或 data[0].url
       if (imageResData?.data?.[0]?.b64_json) {
         imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
         console.log('直接获取到 b64_json');
@@ -175,12 +158,7 @@ serve(async (req) => {
         // 新版 API 形式
         console.log('通过 data[0].url 获取图片');
         imageBase64 = await fetchImageBase64FromUrl(imageResData.data[0].url);
-      } else if (imageResData?.images?.[0]?.url) {
-        // 某些模型会返回 images 字段
-        console.log('通过 images[0].url 获取图片');
-        imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
       } else {
-        // 均无结果
         console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
       }
 

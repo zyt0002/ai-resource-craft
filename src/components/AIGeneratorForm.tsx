@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
-  // 支持的模型列表
+  // 支持的模型列表（文本/文档/课件/视频/音频）
   const modelList = [
     { value: "Qwen/Qwen2.5-7B-Instruct", label: "Qwen/Qwen2.5-7B-Instruct" },
     { value: "Tongyi-Zhiwen/QwenLong-L1-32B", label: "Tongyi-Zhiwen/QwenLong-L1-32B" },
@@ -42,23 +41,13 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" },
   ];
 
-  // 图片模型列表
+  // 只保留Kolors 图片模型
   const imageModelList = [
     { value: "Kwai-Kolors/Kolors", label: "Kwai-Kolors/Kolors" },
-    { value: "black-forest-labs/FLUX.1-schnell", label: "FLUX.1 Schnell" },
-    { value: "SD 3.5 Large", label: "SD 3.5 Large" }
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log("提交表单数据:", {
-      prompt,
-      generationType,
-      model: selectedModel,
-      fileUrl: uploadedFileUrl,
-    });
-    
     onGenerate({
       prompt,
       generationType,
@@ -68,17 +57,13 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
   };
 
   const handleGenerationTypeChange = (value: string) => {
-    console.log("切换生成类型到:", value);
     setGenerationType(value);
-    
-    // 当切换到图片生成时，自动选择图片模型
-    if (value === "image" && !imageModelList.find(m => m.value === selectedModel)) {
-      console.log("切换到图片模型: Kwai-Kolors/Kolors");
+    // 切换到图片生成时，自动选Kolors
+    if (value === "image") {
       setSelectedModel("Kwai-Kolors/Kolors");
     }
-    // 当切换到非图片生成时，如果当前是图片模型，则切换到文本模型
-    if (value !== "image" && imageModelList.find(m => m.value === selectedModel)) {
-      console.log("切换到文本模型: Qwen/Qwen2.5-7B-Instruct");
+    // 切换回文本/其它时选文本默认模型
+    if (value !== "image") {
       setSelectedModel("Qwen/Qwen2.5-7B-Instruct");
     }
   };
@@ -100,7 +85,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
           </SelectContent>
         </Select>
       </div>
-      
+
       {generationType === "image" ? (
         <div className="space-y-2">
           <Label htmlFor="image-model">图片生成模型</Label>
@@ -130,14 +115,14 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
           </Select>
         </div>
       )}
-      
+
       <FileUploadComponent
         onFileUpload={(url, fileName, fileType) => {
           setUploadedFileUrl(url);
           setUploadedFileName(fileName);
         }}
       />
-      
+
       <div className="space-y-2">
         <Label htmlFor="prompt">生成提示</Label>
         <Textarea
@@ -148,7 +133,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
           rows={4}
         />
       </div>
-      
+
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? (
           <>
