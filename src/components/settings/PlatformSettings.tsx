@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -11,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Save } from "lucide-react";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useRefreshPlatformSettings } from "@/hooks/usePlatformSettings";
 
 const DEFAULT_PLATFORM = {
   platformName: "EduGen",
@@ -28,6 +28,7 @@ const DEFAULT_PLATFORM = {
 export default function PlatformSettings() {
   const { toast } = useToast();
   const isAdmin = useIsAdmin();
+  const refreshPlatformSettings = useRefreshPlatformSettings();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState(DEFAULT_PLATFORM);
 
@@ -66,6 +67,7 @@ export default function PlatformSettings() {
           }
         ], { onConflict: "key" });
       if (error) throw error;
+      refreshPlatformSettings(); // 保存后刷新全局缓存，让页面显示同步更新
       toast({
         title: "平台设置已保存",
         description: "配置更新成功",

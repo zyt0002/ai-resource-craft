@@ -9,9 +9,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 
 export default function Navbar() {
   const { profile, signOut } = useAuth();
+  const { data: platform, isLoading } = usePlatformSettings();
 
   return (
     <header
@@ -21,9 +23,9 @@ export default function Navbar() {
     >
       <div className="flex items-center gap-4">
         <span className="font-extrabold text-2xl tracking-tight flex items-end select-none">
-          <span className="text-blue-500">AI</span>
+          <span className="text-blue-500">{isLoading ? "..." : platform?.platformName || "EduGen"}</span>
           <span className="ml-2 text-base font-light text-gray-600">
-            智能教学资源生成系统
+            {isLoading ? "加载中..." : platform?.platformDescription || "智能教学资源生成系统"}
           </span>
         </span>
       </div>
