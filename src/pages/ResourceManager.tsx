@@ -68,14 +68,7 @@ export default function ResourceManager() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="w-full max-w-2xl mx-auto mt-16 text-center text-lg text-muted-foreground p-12 border rounded-lg">
-        🚫 您没有权限访问资源管理功能，如需访问请联系管理员。
-      </div>
-    );
-  }
-
+  // isAdmin 不再控制页面访问限制，所有人都能访问页面
   return (
     <div className="w-full max-w-6xl mx-auto mt-8">
       <div className="flex items-center justify-between mb-6">
@@ -89,11 +82,13 @@ export default function ResourceManager() {
           >
             {isLoading ? (<><Loader2 className="w-4 h-4 mr-1 animate-spin" />加载中...</>) : "刷新"}
           </Button>
-          <Button
-            onClick={() => setUploadOpen(true)}
-          >
-            上传资源
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => setUploadOpen(true)}
+            >
+              上传资源
+            </Button>
+          )}
         </div>
       </div>
       {isLoading ? (
@@ -125,53 +120,55 @@ export default function ResourceManager() {
                     file_type: res.file_type,
                   })}
                 />
-                <div className="absolute right-3 top-3 z-10 flex opacity-0 group-hover:opacity-100 transition gap-1">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => setEditResource(res)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  {/* 新增共享到房间按钮 */}
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    title="共享到协作房间"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setShareResourceId(res.id);
-                    }}
-                  >
-                    🤝
-                  </Button>
-                  <AlertDialog open={!!deleteResource && deleteResource.id === res.id} onOpenChange={open => !open && setDeleteResource(null)}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        onClick={e => {
-                          e.stopPropagation();
-                          setDeleteResource(res);
-                        }}
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>确认删除？</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          该操作无法撤销，将永久移除此资源。
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>取消</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleRemove}>删除</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+                {isAdmin && (
+                  <div className="absolute right-3 top-3 z-10 flex opacity-0 group-hover:opacity-100 transition gap-1">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => setEditResource(res)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    {/* 新增共享到房间按钮 */}
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      title="共享到协作房间"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setShareResourceId(res.id);
+                      }}
+                    >
+                      🤝
+                    </Button>
+                    <AlertDialog open={!!deleteResource && deleteResource.id === res.id} onOpenChange={open => !open && setDeleteResource(null)}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setDeleteResource(res);
+                          }}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>确认删除？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            该操作无法撤销，将永久移除此资源。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleRemove}>删除</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -179,6 +176,7 @@ export default function ResourceManager() {
           )}
         </div>
       )}
+      {/* 仅管理员有编辑、上传、共享的 Dialog，普通用户只有看 */}
       <ResourceEditDialog
         open={Boolean(editResource)}
         onOpenChange={(v) => setEditResource(v ? editResource : null)}
@@ -190,17 +188,21 @@ export default function ResourceManager() {
         onOpenChange={(open) => setPreviewResource(open ? previewResource : null)}
         resource={previewResource}
       />
-      <ResourceUploadDialog
-        open={uploadOpen}
-        onOpenChange={setUploadOpen}
-        onSuccess={refetch}
-      />
-      <ShareToRoomDialog
-        open={!!shareResourceId}
-        onOpenChange={open => setShareResourceId(open ? shareResourceId : null)}
-        resourceId={shareResourceId ?? ""}
-        onShared={refetch}
-      />
+      {isAdmin && (
+        <ResourceUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          onSuccess={refetch}
+        />
+      )}
+      {isAdmin && (
+        <ShareToRoomDialog
+          open={!!shareResourceId}
+          onOpenChange={open => setShareResourceId(open ? shareResourceId : null)}
+          resourceId={shareResourceId ?? ""}
+          onShared={refetch}
+        />
+      )}
     </div>
   );
 }
