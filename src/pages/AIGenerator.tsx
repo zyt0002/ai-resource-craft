@@ -129,10 +129,11 @@ export default function AIGenerator() {
 
       if (error) throw error;
 
-      toast({ title: "保存成功！", description: "资源已保存为草稿" });
+      toast({ title: "保存成功！", description: "资源已保存为草稿，在资源管理中可查看和管理" });
       setTitle("");
       setDescription("");
-      setGeneratedContent("");
+      // 不再清空 generatedContent，便于用户继续操作
+      // setGeneratedContent(""); // 移除此行
     } catch (error: any) {
       toast({
         title: "保存失败",
