@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Shield, Save } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+// User role类型
+type UserRole = "admin" | "teacher" | "student";
 
 interface Permission {
   id: string;
@@ -15,18 +20,21 @@ interface Permission {
   enabled: boolean;
 }
 
-interface UserRole {
+interface Profile {
   id: string;
-  username: string;
-  email: string;
-  role: "admin" | "editor" | "viewer";
-  lastActive: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  email?: string | null; // 将来可关联supabase user表
+  role: UserRole | null;
+  updated_at: string | null;
 }
 
 export default function PermissionSettings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
+
+  // 权限数组
   const [permissions, setPermissions] = useState<Permission[]>([
     { id: "create_content", name: "创建内容", description: "允许创建新的教育资源", enabled: true },
     { id: "edit_content", name: "编辑内容", description: "允许编辑现有内容", enabled: true },
@@ -36,24 +44,33 @@ export default function PermissionSettings() {
     { id: "export_data", name: "导出数据", description: "允许导出平台数据", enabled: false },
   ]);
 
-  const [users] = useState<UserRole[]>([
-    { id: "1", username: "admin", email: "admin@example.com", role: "admin", lastActive: "2024-01-15" },
-    { id: "2", username: "teacher1", email: "teacher1@example.com", role: "editor", lastActive: "2024-01-14" },
-    { id: "3", username: "student1", email: "student1@example.com", role: "viewer", lastActive: "2024-01-13" },
-  ]);
+  // ----------------- 用户列表加载 ------------------
+  const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async (): Promise<Profile[]> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
+  // 权限toggle变更
   const handlePermissionChange = (permissionId: string, enabled: boolean) => {
-    setPermissions(prev => 
-      prev.map(permission => 
+    setPermissions(prev =>
+      prev.map(permission =>
         permission.id === permissionId ? { ...permission, enabled } : permission
       )
     );
   };
 
+  // 权限保存事件
   const handleSave = async () => {
     setLoading(true);
     try {
-      // 这里可以添加保存权限设置的逻辑
+      // 此处省略权限保存逻辑，实际项目可更新至数据库
       toast({
         title: "权限设置已保存",
         description: "权限配置更新成功",
@@ -69,22 +86,30 @@ export default function PermissionSettings() {
     }
   };
 
-  const getRoleBadgeVariant = (role: string) => {
+  // 角色badge配色
+  const getRoleBadgeVariant = (role: UserRole | null) => {
     switch (role) {
       case "admin": return "destructive";
-      case "editor": return "default";
-      case "viewer": return "secondary";
+      case "teacher": return "default";
+      case "student": return "secondary";
       default: return "outline";
     }
   };
 
-  const getRoleText = (role: string) => {
+  // 角色显示文本
+  const getRoleText = (role: UserRole | null) => {
     switch (role) {
       case "admin": return "管理员";
-      case "editor": return "编辑者";
-      case "viewer": return "查看者";
-      default: return role;
+      case "teacher": return "教师";
+      case "student": return "学生";
+      default: return "-";
     }
+  };
+
+  // 格式化日期
+  const formatDate = (d: string | null) => {
+    if (!d) return "-";
+    return new Date(d).toLocaleDateString() + " " + new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -112,7 +137,6 @@ export default function PermissionSettings() {
               ))}
             </div>
           </div>
-
           <Button onClick={handleSave} disabled={loading} className="w-full md:w-auto">
             <Save className="w-4 h-4 mr-2" />
             {loading ? "保存中..." : "保存权限设置"}
@@ -134,37 +158,49 @@ export default function PermissionSettings() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>用户名</TableHead>
-                <TableHead>邮箱</TableHead>
-                <TableHead>角色</TableHead>
-                <TableHead>最后活动</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {getRoleText(user.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.lastActive}</TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm">
-                      <Shield className="w-4 h-4 mr-1" />
-                      管理
-                    </Button>
-                  </TableCell>
+          {usersLoading ? (
+            <div className="text-center text-muted-foreground p-6">加载中...</div>
+          ) : usersError ? (
+            <div className="text-sm text-destructive p-6">获取用户失败！</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>用户名</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>创建时间</TableHead>
+                  <TableHead>操作</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {users && users.length ? users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.full_name || "-"}</TableCell>
+                    <TableCell>{user.username || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {getRoleText(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{formatDate(user.updated_at)}</TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm">
+                        <Shield className="w-4 h-4 mr-1" />
+                        管理
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      暂无用户
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
