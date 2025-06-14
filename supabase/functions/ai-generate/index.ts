@@ -27,6 +27,35 @@ const supportedModels = [
   "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
 ];
 
+// 多模态支持的模型
+const multimodalModels = [
+  "Qwen/Qwen2.5-VL-32B-Instruct",
+  "THUDM/GLM-Z1-32B-0414",
+  "THUDM/GLM-Z1-Rumination-32B-0414",
+];
+
+// 检查文件是否为图片
+function isImageFile(contentType: string): boolean {
+  return contentType.includes('image/');
+}
+
+// 将图片转换为base64
+async function imageToBase64(fileUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) return null;
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('图片转换失败:', error);
+    return null;
+  }
+}
+
 // 从URL获取文件内容
 async function getFileContent(fileUrl: string): Promise<string> {
   try {
@@ -93,15 +122,77 @@ serve(async (req) => {
       audio: "你是一个音频内容生成助手。请根据用户需求生成音频教学内容的文本稿。",
     };
 
-    // 构建用户消息
-    let userContent = prompt;
-    
-    // 如果有上传的文件，获取文件内容
-    if (fileUrl) {
-      console.log('检测到上传文件:', fileUrl);
+    // 构建消息数组
+    const messages = [
+      {
+        role: 'system',
+        content: systemPrompts[generationType as keyof typeof systemPrompts] || systemPrompts.document
+      }
+    ];
+
+    // 处理用户消息和文件
+    if (fileUrl && multimodalModels.includes(targetModel)) {
+      console.log('使用多模态模型处理文件:', targetModel);
+      
+      // 检查文件类型
+      const response = await fetch(fileUrl, { method: 'HEAD' });
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (isImageFile(contentType)) {
+        // 对于图片，使用多模态格式
+        console.log('处理图片文件，使用多模态格式');
+        const imageBase64 = await imageToBase64(fileUrl);
+        
+        if (imageBase64) {
+          messages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt + '\n\n请分析上传的图片内容，并根据图片生成相关的教学资源。'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageBase64
+                }
+              }
+            ]
+          });
+        } else {
+          // 图片处理失败，回退到文本模式
+          const fileContent = await getFileContent(fileUrl);
+          messages.push({
+            role: 'user',
+            content: prompt + `\n\n用户上传的文件信息:\n${fileContent}\n\n请根据上述信息来生成相关的教学资源。`
+          });
+        }
+      } else {
+        // 对于非图片文件，获取内容并以文本形式处理
+        console.log('处理非图片文件');
+        const fileContent = await getFileContent(fileUrl);
+        messages.push({
+          role: 'user',
+          content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`
+        });
+      }
+    } else if (fileUrl) {
+      // 非多模态模型，使用文本描述
+      console.log('使用文本模型处理文件');
       const fileContent = await getFileContent(fileUrl);
-      userContent += `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`;
+      messages.push({
+        role: 'user',
+        content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`
+      });
+    } else {
+      // 没有文件，直接使用提示
+      messages.push({
+        role: 'user',
+        content: prompt
+      });
     }
+
+    console.log('发送到API的消息:', JSON.stringify(messages, null, 2));
 
     const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
@@ -111,16 +202,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: targetModel,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompts[generationType as keyof typeof systemPrompts] || systemPrompts.document
-          },
-          {
-            role: 'user',
-            content: userContent
-          }
-        ],
+        messages: messages,
         temperature: 0.7,
         max_tokens: 2000,
       }),
@@ -141,7 +223,8 @@ serve(async (req) => {
         content: generatedContent,
         model: targetModel,
         generationType: generationType,
-        fileProcessed: !!fileUrl
+        fileProcessed: !!fileUrl,
+        multimodalUsed: fileUrl && multimodalModels.includes(targetModel)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
