@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 const resourceTypes = [
   { value: "courseware", label: "课件" },
@@ -23,7 +23,18 @@ export default function ResourceEditDialog({ open, onOpenChange, resource, onSuc
 }) {
   const [title, setTitle] = useState(resource.title ?? "");
   const [type, setType] = useState(resource.type ?? "document");
+  const [categoryId, setCategoryId] = useState<string>(resource.category_id ?? "");
   const [saving, setSaving] = useState(false);
+
+  // 分类获取
+  const { data: categories, isLoading: catLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categories").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // 每次打开时设置初始值
   // eslint-disable-next-line
@@ -31,6 +42,7 @@ export default function ResourceEditDialog({ open, onOpenChange, resource, onSuc
   if (!hasInit && open) {
     setTitle(resource.title ?? "");
     setType(resource.type ?? "document");
+    setCategoryId(resource.category_id ?? "");
     setHasInit(true);
   }
   if (!open && hasInit) setHasInit(false);
@@ -39,7 +51,7 @@ export default function ResourceEditDialog({ open, onOpenChange, resource, onSuc
     setSaving(true);
     const { error } = await supabase
       .from("resources")
-      .update({ title, type })
+      .update({ title, type, category_id: categoryId })
       .eq("id", resource.id);
 
     setSaving(false);
@@ -69,11 +81,35 @@ export default function ResourceEditDialog({ open, onOpenChange, resource, onSuc
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              {/* 修复：移除 zIndex prop，如需高层级可用 z-50 className */}
               <SelectContent className="z-50">
                 {resourceTypes.map(t => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">分类</label>
+            <Select
+              value={categoryId}
+              onValueChange={setCategoryId}
+              disabled={catLoading || saving}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={catLoading ? "加载中..." : "请选择分类"} />
+              </SelectTrigger>
+              <SelectContent>
+                {categories && categories.length > 0 ? (
+                  categories.map((cat: any) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    暂无分类
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

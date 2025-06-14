@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth"; // 新增: 获取当前登录用户
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 export default function ResourceUploadDialog({
   open,
@@ -30,6 +32,17 @@ export default function ResourceUploadDialog({
   const { toast } = useToast();
 
   const { profile } = useAuth(); // 新增：获取当前用户 profile
+
+  // 分类数据
+  const { data: categories, isLoading: catLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categories").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+  const [categoryId, setCategoryId] = useState<string>("");
 
   // 资源类型
   const resourceTypes = [
@@ -68,6 +81,10 @@ export default function ResourceUploadDialog({
       toast({ title: "未检测到用户，请重新登录", variant: "destructive" });
       return;
     }
+    if (!categoryId) {
+      toast({ title: "请选择分类", variant: "destructive" });
+      return;
+    }
     setUploading(true);
 
     // 获取公开URL，始终写入 thumbnail_url
@@ -81,7 +98,8 @@ export default function ResourceUploadDialog({
       file_path: selectedFile.url,     // 保持存储内部路径
       file_type: selectedFile.type,
       thumbnail_url: filePublicUrl,    // 永远写公网可访问URL
-      owner_id: profile.id
+      owner_id: profile.id,
+      category_id: categoryId
       // 可选: 其它字段
     };
 
@@ -94,6 +112,7 @@ export default function ResourceUploadDialog({
       setTitle("");
       setType("document");
       setSelectedFile(null);
+      setCategoryId("");
       onOpenChange(false);
       onSuccess && onSuccess();
     }
@@ -143,6 +162,31 @@ export default function ResourceUploadDialog({
                 <option value={t.value} key={t.value}>{t.label}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">分类</label>
+            <Select
+              value={categoryId}
+              onValueChange={setCategoryId}
+              disabled={catLoading || uploading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={catLoading ? "加载中..." : "请选择分类"} />
+              </SelectTrigger>
+              <SelectContent>
+                {categories && categories.length > 0 ? (
+                  categories.map((cat: any) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="" disabled>
+                    暂无分类
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
