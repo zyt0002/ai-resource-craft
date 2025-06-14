@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ export default function Auth() {
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate(); // 👈 新增
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,7 @@ export default function Auth() {
         });
         if (error) throw error;
         toast({ title: "登录成功！", description: "欢迎回到 EduGen 平台" });
+        navigate("/");  // 👈 登录成功后跳转主页
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -46,6 +49,8 @@ export default function Auth() {
           title: "注册成功！", 
           description: "请查看邮箱验证邮件完成注册"
         });
+        // 注册后不同情况下可以跳转主页，部分应用为安全不直接跳转，这里按需添加
+        // navigate("/");
       }
     } catch (error: any) {
       toast({
