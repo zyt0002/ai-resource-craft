@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -33,6 +34,13 @@ const multimodalModels = [
 // 检查文件是否为图片
 function isImageFile(contentType: string): boolean {
   return contentType.includes('image/');
+}
+
+// 检查文件是否为纯文本文件
+function isTextFile(contentType: string): boolean {
+  return contentType.includes('text/') || 
+         contentType.includes('application/json') ||
+         contentType.includes('application/xml');
 }
 
 // 将图片转换为base64
@@ -80,14 +88,14 @@ async function getFileContent(fileUrl: string): Promise<string> {
     const contentType = response.headers.get('content-type') || '';
     console.log('文件类型:', contentType);
     
-    // 对于文本文件，直接读取文本内容
-    if (contentType.includes('text/')) {
+    // 对于纯文本文件，直接读取文本内容
+    if (isTextFile(contentType)) {
       const textContent = await response.text();
       console.log('文本文件内容长度:', textContent.length);
       return textContent;
     }
     
-    // 对于其他类型的文件，返回文件信息
+    // 对于其他类型的文件，返回详细的错误信息和建议
     const arrayBuffer = await response.arrayBuffer();
     const fileSize = arrayBuffer.byteLength;
     
@@ -95,19 +103,36 @@ async function getFileContent(fileUrl: string): Promise<string> {
     
     // 根据文件类型提供不同的处理信息
     if (contentType.includes('application/pdf')) {
-      return `这是一个PDF文件，大小为${fileSize}字节。由于技术限制，无法直接读取PDF内容，请用户提供文件的关键信息或将内容复制到提示中。`;
+      return `检测到PDF文件（${fileSize}字节），但当前系统无法直接解析PDF内容。建议：
+1. 将PDF内容复制粘贴到输入框中
+2. 或者描述PDF的主要内容，我可以根据你的描述生成相关资料
+3. 如果是文字较少的PDF，可以截图上传`;
     } else if (contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || 
                contentType.includes('application/msword')) {
-      return `这是一个Word文档(.docx/.doc)，大小为${fileSize}字节。由于技术限制，无法直接读取Word文档内容，请用户将文档内容复制到提示中，或者提供文档的主要内容概要。`;
+      return `检测到Word文档（${fileSize}字节），但当前系统无法直接解析Word文档内容。建议：
+1. 打开Word文档，复制文字内容并粘贴到输入框中
+2. 或者告诉我文档的主题和要点，我可以据此生成相关教学资料
+3. 如果文档包含重要图表，可以截图上传`;
+    } else if (contentType.includes('application/vnd.ms-excel') || 
+               contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+      return `检测到Excel文件（${fileSize}字节），但当前系统无法直接解析Excel内容。建议：
+1. 将Excel中的关键数据复制粘贴到输入框中
+2. 或者描述表格的结构和主要数据，我可以生成相关的教学内容
+3. 如果需要保持表格格式，可以截图上传`;
     } else if (contentType.includes('image/')) {
-      return `这是一个图片文件，大小为${fileSize}字节。请根据用户的描述或要求来生成相关的教学内容。`;
+      return `这是一个图片文件（${fileSize}字节）。如果选择了支持视觉的多模态模型（如Qwen2.5-VL），可以直接分析图片内容。`;
     } else {
-      return `这是一个${contentType}类型的文件，大小为${fileSize}字节。由于技术限制，无法直接读取此类型文件的内容。`;
+      return `检测到${contentType}类型文件（${fileSize}字节）。当前系统暂不支持直接解析此类文件。建议：
+1. 如果是文本内容，请复制粘贴到输入框中
+2. 或者描述文件的主要内容，我可以根据描述生成相关资料`;
     }
     
   } catch (error) {
     console.error('获取文件内容失败:', error);
-    return `无法获取文件内容，错误: ${error.message}。请确认文件是否可以正常访问，或者将文件内容直接复制到提示中。`;
+    return `文件访问失败：${error.message}。请确认：
+1. 文件链接是否有效
+2. 文件是否可以正常访问
+3. 或者将文件内容直接复制粘贴到输入框中`;
   }
 }
 
@@ -186,18 +211,18 @@ serve(async (req) => {
 
     // 系统提示
     const systemPrompts = {
-      courseware: "你是专业支持教学内容的AI助手。请优先参考用户输入指令，补充专业建议即可。",
+      courseware: "你是专业的教学内容生成助手。请根据用户提供的信息和文件内容，生成高质量的教学课件内容。如果用户上传了文件但系统无法解析，请根据用户的描述和需求生成相应内容。",
       image: "你是AI图像内容建议助手。请以用户需求为主，可适当补充优化建议。",
-      document: "你是教辅AI助手。请以用户指令为主生成教学文本，补充合理性建议即可。",
-      video: "你是脚本AI助手，输出风格与内容以用户指令为主。",
-      audio: "你是音频内容辅助助手，请将输出风格以用户意图为准。",
+      document: "你是教学文档生成助手。请根据用户的需求和提供的材料，生成结构清晰、内容丰富的教学文档。",
+      video: "你是视频脚本生成助手。请根据用户需求生成适合的视频脚本内容。",
+      audio: "你是音频内容生成助手。请根据用户需求生成适合的音频脚本内容。",
     };
 
     // 构建消息数组
     const messages = [
       {
         role: 'system',
-        content: systemPrompts[generationType as keyof typeof systemPrompts] || "你是AI内容生成助手，请以用户输入为主要依据。"
+        content: systemPrompts[generationType as keyof typeof systemPrompts] || "你是AI内容生成助手，请根据用户的输入和文件内容生成相应内容。"
       }
     ];
 
@@ -230,23 +255,23 @@ serve(async (req) => {
           const fileContent = await getFileContent(fileUrl);
           messages.push({
             role: 'user',
-            content: prompt + `\n\n用户上传的文件信息:\n${fileContent}\n\n请根据上述信息来生成相关内容。`
+            content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。`
           });
         }
       } else {
-        // 非图片文件仍然走文本描述
+        // 非图片文件，获取文件信息
         const fileContent = await getFileContent(fileUrl);
         messages.push({
           role: 'user',
-          content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关内容。`
+          content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。如果无法解析文件内容，请根据用户的描述和需求生成相应的教学资源。`
         });
       }
     } else if (fileUrl) {
-      // 非多模态模型，仍然拼接文件信息到 user prompt
+      // 非多模态模型，获取文件信息
       const fileContent = await getFileContent(fileUrl);
       messages.push({
         role: 'user',
-        content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请结合上述内容生成相关资源。`
+        content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。如果无法解析文件内容，请根据用户的描述和需求生成相应的教学资源。`
       });
     } else {
       messages.push({
