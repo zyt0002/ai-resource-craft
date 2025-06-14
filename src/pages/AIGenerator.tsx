@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sparkles, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,25 @@ export default function AIGenerator() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
+  const [selectedModel, setSelectedModel] = useState("Qwen/Qwen2.5-7B-Instruct");
+
+  // 支持的模型列表
+  const modelList = [
+    { value: "Qwen/Qwen2.5-7B-Instruct", label: "Qwen/Qwen2.5-7B-Instruct" },
+    { value: "Tongyi-Zhiwen/QwenLong-L1-32B", label: "Tongyi-Zhiwen/QwenLong-L1-32B" },
+    { value: "Qwen/Qwen3-32B", label: "Qwen/Qwen3-32B" },
+    { value: "THUDM/GLM-Z1-32B-0414", label: "THUDM/GLM-Z1-32B-0414" },
+    { value: "Qwen/Qwen2.5-VL-32B-Instruct", label: "Qwen/Qwen2.5-VL-32B-Instruct" },
+    { value: "Qwen/QwQ-32B", label: "Qwen/QwQ-32B" },
+    { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B" },
+    { value: "Qwen/Qwen2.5-Coder-32B-Instruct", label: "Qwen/Qwen2.5-Coder-32B-Instruct" },
+    { value: "Qwen/Qwen2.5-32B-Instruct", label: "Qwen/Qwen2.5-32B-Instruct" },
+    { value: "THUDM/GLM-4-32B-0414", label: "THUDM/GLM-4-32B-0414" },
+    { value: "THUDM/GLM-Z1-Rumination-32B-0414", label: "THUDM/GLM-Z1-Rumination-32B-0414" },
+    { value: "Qwen/Qwen3-14B", label: "Qwen/Qwen3-14B" },
+    { value: "Qwen/Qwen2.5-14B-Instruct", label: "Qwen/Qwen2.5-14B-Instruct" },
+    { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" },
+  ];
 
   // 获取 AI 生成历史
   const { data: aiGenerations, refetch } = useQuery({
@@ -49,6 +67,7 @@ export default function AIGenerator() {
         body: {
           prompt,
           generationType,
+          model: selectedModel,
         },
       });
 
@@ -57,7 +76,7 @@ export default function AIGenerator() {
       if (data.success) {
         setGeneratedContent(data.content);
         
-        // 保存到数据库
+        // 保存到数据库时也一并存模型信息
         const { error: saveError } = await supabase
           .from('ai_generations')
           .insert({
@@ -65,6 +84,7 @@ export default function AIGenerator() {
             prompt,
             generation_type: generationType,
             result_data: { content: data.content, model: data.model },
+            model: data.model, // 记录模型
           });
 
         if (saveError) {
@@ -146,6 +166,20 @@ export default function AIGenerator() {
                     <SelectItem value="image">教学图片</SelectItem>
                     <SelectItem value="video">视频脚本</SelectItem>
                     <SelectItem value="audio">音频脚本</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* 新增：选择模型 */}
+              <div className="space-y-2">
+                <Label htmlFor="model">选择模型</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="请选择模型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelList.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -233,10 +267,9 @@ export default function AIGenerator() {
                 <div key={generation.id} className="border rounded-lg p-3">
                   <div className="flex justify-between items-start mb-2">
                     <span className="font-medium">{generation.generation_type}</span>
-                    <span className="text-sm text-gray-500">
-                      {new Date(generation.created_at).toLocaleString()}
-                    </span>
+                    <span className="text-sm text-gray-500">{new Date(generation.created_at).toLocaleString()}</span>
                   </div>
+                  <div className="text-xs text-sky-700 mb-1">模型: {generation.model || generation.result_data?.model || "未知"}</div>
                   <p className="text-sm text-gray-600 line-clamp-2">{generation.prompt}</p>
                 </div>
               ))}
