@@ -33,7 +33,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, generationType, model } = await req.json();
+    const { prompt, generationType, model, fileUrl } = await req.json();
+    console.log('收到请求:', { prompt, generationType, model, fileUrl });
+    
     if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
 
     // 统一兼容未选择/不支持时 fallback
@@ -46,6 +48,15 @@ serve(async (req) => {
       video: "你是一个视频脚本生成助手。请根据用户需求生成教学视频的脚本内容。",
       audio: "你是一个音频内容生成助手。请根据用户需求生成音频教学内容的文本稿。",
     };
+
+    // 构建用户消息
+    let userContent = prompt;
+    
+    // 如果有上传的文件，添加文件信息到提示中
+    if (fileUrl) {
+      console.log('检测到上传文件:', fileUrl);
+      userContent += `\n\n注意：用户上传了一个文件，文件URL为：${fileUrl}。请根据这个文件的内容来生成相关内容。如果是图片文件，请描述图片内容并结合图片生成相关教学材料。如果是文档文件，请基于文档内容生成相应的教学资源。`;
+    }
 
     const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
@@ -62,7 +73,7 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: prompt
+            content: userContent
           }
         ],
         temperature: 0.7,
@@ -77,12 +88,15 @@ serve(async (req) => {
     const data = await response.json();
     const generatedContent = data.choices[0].message.content;
 
+    console.log('生成完成:', { model: targetModel, contentLength: generatedContent.length });
+
     return new Response(
       JSON.stringify({ 
         success: true,
         content: generatedContent,
         model: targetModel,
-        generationType: generationType 
+        generationType: generationType,
+        fileProcessed: !!fileUrl
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
