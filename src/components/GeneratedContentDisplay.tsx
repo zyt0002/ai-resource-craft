@@ -2,6 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface GeneratedContentDisplayProps {
   generatedContent: string;
@@ -11,6 +13,14 @@ interface GeneratedContentDisplayProps {
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onSaveAsResource: () => void;
+}
+
+// 检测内容是否为 Markdown，根据标题后缀或内容特征
+function isMarkdown(title: string, content: string) {
+  if (/\.md$/i.test(title)) return true;
+  // 简单猜测判断，也可精细化
+  if (content && (/^# /.test(content.trim()) || /[*_`~-]/.test(content))) return true;
+  return false;
 }
 
 export function GeneratedContentDisplay({
@@ -57,6 +67,8 @@ export function GeneratedContentDisplay({
   }
 
   if (generatedContent) {
+    const renderAsMarkdown = isMarkdown(title, generatedContent);
+
     return (
       <div className="space-y-4">
         <div className="space-y-2">
@@ -79,8 +91,12 @@ export function GeneratedContentDisplay({
         </div>
         <div className="space-y-2">
           <Label>生成内容</Label>
-          <div className="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm">{generatedContent}</pre>
+          <div className="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto text-sm prose prose-neutral prose-p:my-1">
+            {renderAsMarkdown ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedContent}</ReactMarkdown>
+            ) : (
+              <pre className="whitespace-pre-wrap">{generatedContent}</pre>
+            )}
           </div>
         </div>
         <Button onClick={onSaveAsResource} className="w-full">
