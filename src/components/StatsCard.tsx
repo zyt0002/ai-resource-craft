@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
   title: string;
@@ -12,7 +13,15 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   className?: string;
+  cardColor?: "blue" | "green" | "purple" | "orange";
 }
+
+const colorMap = {
+  blue: "bg-blue-100 text-blue-600",
+  green: "bg-green-100 text-green-600",
+  purple: "bg-purple-100 text-purple-600",
+  orange: "bg-orange-100 text-orange-600",
+};
 
 export default function StatsCard({ 
   title, 
@@ -20,29 +29,37 @@ export default function StatsCard({
   description, 
   icon: Icon, 
   trend,
-  className = ""
+  className = "",
+  cardColor = "blue",
 }: StatsCardProps) {
   return (
-    <Card className={`border-none shadow-card bg-gradient-to-b from-emerald-50 via-sky-50 to-orange-50 hover:shadow-hover hover:scale-105 transition-all duration-300 animate-fade-pop ${className}`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-500">{title}</CardTitle>
-        <Icon className="h-5 w-5 text-fuchsia-500 drop-shadow" />
+    <Card className={cn(
+      "border border-gray-200 shadow-card bg-white hover:shadow-soft transition-all duration-300 rounded-xl min-w-[180px] overflow-hidden",
+      className
+    )}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4 px-4">
+        <CardTitle className="text-base font-semibold text-gray-700">{title}</CardTitle>
+        <div className={cn(
+          "rounded-lg p-2 flex items-center justify-center shadow-sm",
+          colorMap[cardColor]
+        )}>
+          <Icon className="h-5 w-5" />
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-sky-900 dark:text-sky-200">{value}</div>
+      <CardContent className="px-4 pb-4 pt-1">
+        <div className="text-2xl font-bold text-gray-900">{value}</div>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className="text-xs text-gray-500 mt-1">{description}</p>
         )}
         {trend && (
           <div className="flex items-center mt-2">
-            <span className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            <span className={cn("text-xs font-medium", trend.isPositive ? 'text-green-600' : 'text-red-600')}>
               {trend.isPositive ? '+' : ''}{trend.value}%
             </span>
-            <span className="text-xs text-muted-foreground ml-1">相比上月</span>
+            <span className="text-xs text-gray-400 ml-1">相比上月</span>
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
-

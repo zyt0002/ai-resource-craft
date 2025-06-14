@@ -84,6 +84,35 @@ export default {
 					300: "#e879f9",
 					500: "#a21caf",
 				},
+				blue: {
+					100: "#e9f2fe",
+					300: "#69a8f7",
+					500: "#377cff",
+				},
+				green: {
+					100: "#e8fff2",
+					300: "#71e1b2",
+					500: "#22c55e",
+				},
+				purple: {
+					100: "#f2e9fa",
+					300: "#b98efc",
+					500: "#9261ed",
+				},
+				orange: {
+					100: "#fff3e3",
+					300: "#ffc063",
+					500: "#ff9346",
+				},
+				gray: {
+					100: "#f6f9fb",
+					300: "#e4e7ef",
+					500: "#a0aec0",
+				},
+				muted: {
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))'
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -94,14 +123,15 @@ export default {
 				...theme('colors'),
 			}),
 			boxShadow: {
-				'soft': '0 8px 32px 0 rgba(31, 38, 135, 0.10)',
-				'card': '0 8px 24px 0 rgba(80, 102, 144, 0.10)',
+				'soft': '0 6px 28px 0 rgba(80, 120, 200, 0.08)',
+				'card': '0 1px 6px 0 rgba(60,80,120,0.06)',
 				'hover': '0 2px 20px 0 rgba(34,197,94,0.13)', // 绿色烟雾
 			},
 			animation: {
-				'fade-in': 'fade-in 0.5s ease',
+				'fade-in': 'fade-in 0.36s cubic-bezier(.32,1.56,.74,.97)',
 				'fade-pop': 'scale-in 0.2s, fade-in 0.4s',
-				'hover-bounce': 'hover-bounce 0.5s cubic-bezier(.36,.07,.19,.97) both'
+				'hover-bounce': 'hover-bounce 0.5s cubic-bezier(.36,.07,.19,.97) both',
+				'scale-in': "scale-in 0.20s cubic-bezier(.44,0,0.56,1)"
 			},
 			keyframes: {
 				'fade-in': {
@@ -132,6 +162,13 @@ export default {
 						height: '0'
 					}
 				}
+			},
+			borderRadius: {
+				lg: "1rem",
+				xl: "1.25rem",
+			},
+			fontFamily: {
+				sans: ['"Inter"', 'system-ui', "sans-serif"],
 			}
 		}
 	},
