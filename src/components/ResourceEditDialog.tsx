@@ -69,7 +69,8 @@ export default function ResourceEditDialog({ open, onOpenChange, resource, onSuc
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent zIndex={50}>
+              {/* 修复：移除 zIndex prop，如需高层级可用 z-50 className */}
+              <SelectContent className="z-50">
                 {resourceTypes.map(t => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
