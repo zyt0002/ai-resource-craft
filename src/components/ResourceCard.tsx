@@ -28,11 +28,11 @@ export function ResourceCard({
   return (
     <div
       className={cn(
-        "w-full max-w-[240px] h-44 rounded-lg bg-card shadow hover:shadow-lg border p-4 flex flex-col justify-between transition-all cursor-pointer group animate-fade-in"
+        "w-full max-w-[240px] h-44 rounded-2xl bg-gradient-to-br from-sky-50 via-emerald-50 to-orange-100 shadow-card hover:shadow-hover border border-orange-100 p-4 flex flex-col justify-between transition-all cursor-pointer group animate-fade-pop hover:scale-105"
       )}
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded bg-accent flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
+        <div className="w-10 h-10 rounded bg-gradient-to-r from-orange-200 to-emerald-200 flex items-center justify-center text-primary group-hover:bg-fuchsia-200 group-hover:text-primary-foreground transition">
           {resource.type === "image" && resource.previewUrl ? (
             <img src={resource.previewUrl} alt={resource.title} className="w-8 h-8 object-cover rounded" />
           ) : (
@@ -45,7 +45,7 @@ export function ResourceCard({
         </div>
       </div>
       <button
-        className="mt-3 text-xs text-primary bg-accent rounded py-1 hover:bg-primary hover:text-primary-foreground transition w-full"
+        className="mt-3 text-xs font-semibold text-fuchsia-700 bg-gradient-to-r from-orange-200 to-fuchsia-200 rounded-lg py-1 hover:bg-fuchsia-400 hover:text-white transition w-full shadow-sm"
         onClick={onPreview}
       >
         预览 / 下载
@@ -53,4 +53,3 @@ export function ResourceCard({
     </div>
   );
 }
-
