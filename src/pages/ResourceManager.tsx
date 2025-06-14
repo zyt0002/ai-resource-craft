@@ -1,4 +1,3 @@
-
 import { ResourceCard } from "@/components/ResourceCard";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +8,7 @@ import { Loader2, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import ResourceEditDialog from "@/components/ResourceEditDialog";
 import ResourcePreviewDialog from "@/components/ResourcePreviewDialog";
+import ResourceUploadDialog from "@/components/ResourceUploadDialog";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -27,6 +27,7 @@ export default function ResourceManager() {
   const [editResource, setEditResource] = useState<any>(null); // 当前正在编辑的资源
   const [deleteResource, setDeleteResource] = useState<any>(null); // 待删除资源
   const [previewResource, setPreviewResource] = useState<any>(null); // 预览资源
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // 拉取资源表，仅属于当前登录用户的资源
   const { data: resources, isLoading, refetch } = useQuery({
@@ -77,7 +78,7 @@ export default function ResourceManager() {
             {isLoading ? (<><Loader2 className="w-4 h-4 mr-1 animate-spin" />加载中...</>) : "刷新"}
           </Button>
           <Button
-            onClick={() => toast({ title: "上传资源", description: "暂未接入Supabase存储，后续支持多格式上传。" })}
+            onClick={() => setUploadOpen(true)}
           >
             上传资源
           </Button>
@@ -164,6 +165,11 @@ export default function ResourceManager() {
         open={!!previewResource}
         onOpenChange={(open) => setPreviewResource(open ? previewResource : null)}
         resource={previewResource}
+      />
+      <ResourceUploadDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        onSuccess={refetch}
       />
     </div>
   );
