@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -57,7 +56,7 @@ export default function ShareToRoomDialog({
     enabled: !!profile?.id && open,
   });
 
-  const { mutate: shareResource, isLoading: isSharing } = useMutation({
+  const { mutate: shareResource, isPending: isSharing } = useMutation({
     mutationFn: async () => {
       if (!roomId || !resourceId || !profile?.id) return false;
       const { error } = await supabase.from("collab_room_resources").insert({
