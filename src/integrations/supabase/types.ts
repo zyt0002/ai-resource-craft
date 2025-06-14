@@ -9,7 +9,225 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ai_generations: {
+        Row: {
+          created_at: string | null
+          generation_type: string
+          id: string
+          prompt: string
+          resource_id: string | null
+          result_data: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          generation_type: string
+          id?: string
+          prompt: string
+          resource_id?: string | null
+          result_data?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          generation_type?: string
+          id?: string
+          prompt?: string
+          resource_id?: string | null
+          result_data?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_generations_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_generations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"] | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["user_role"] | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"] | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      resource_tags: {
+        Row: {
+          id: string
+          resource_id: string | null
+          tag_id: string | null
+        }
+        Insert: {
+          id?: string
+          resource_id?: string | null
+          tag_id?: string | null
+        }
+        Update: {
+          id?: string
+          resource_id?: string | null
+          tag_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_tags_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resources: {
+        Row: {
+          category_id: string | null
+          content: string | null
+          created_at: string | null
+          description: string | null
+          download_count: number | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          owner_id: string | null
+          status: Database["public"]["Enums"]["resource_status"] | null
+          thumbnail_url: string | null
+          title: string
+          type: Database["public"]["Enums"]["resource_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          owner_id?: string | null
+          status?: Database["public"]["Enums"]["resource_status"] | null
+          thumbnail_url?: string | null
+          title: string
+          type: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          owner_id?: string | null
+          status?: Database["public"]["Enums"]["resource_status"] | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["resource_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resources_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +236,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      resource_status: "draft" | "published" | "archived"
+      resource_type: "courseware" | "video" | "image" | "audio" | "document"
+      user_role: "admin" | "teacher" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +353,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      resource_status: ["draft", "published", "archived"],
+      resource_type: ["courseware", "video", "image", "audio", "document"],
+      user_role: ["admin", "teacher", "student"],
+    },
   },
 } as const
