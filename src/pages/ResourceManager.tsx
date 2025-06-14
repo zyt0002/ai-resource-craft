@@ -5,12 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { useState } from "react";
+import ResourceEditDialog from "@/components/ResourceEditDialog";
 
 export default function ResourceManager() {
   const { profile } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editResource, setEditResource] = useState<any>(null); // 当前正在编辑的资源
 
   // 拉取资源表，仅属于当前登录用户的资源
   const { data: resources, isLoading, refetch } = useQuery({
@@ -60,19 +62,36 @@ export default function ResourceManager() {
         <div className="flex flex-wrap gap-6">
           {resources && resources.length > 0 ? (
             resources.map((res: any) => (
-              <ResourceCard key={res.id} resource={{
-                id: res.id,
-                title: res.title,
-                type: res.type,
-                updatedAt: res.updated_at?.slice(0, 10) || "",
-                previewUrl: res.thumbnail_url
-              }} />
+              <div key={res.id} className="relative group">
+                <ResourceCard resource={{
+                  id: res.id,
+                  title: res.title,
+                  type: res.type,
+                  updatedAt: res.updated_at?.slice(0, 10) || "",
+                  previewUrl: res.thumbnail_url
+                }} />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="absolute right-3 top-3 z-10 opacity-0 group-hover:opacity-100 transition"
+                  onClick={() => setEditResource(res)}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
             ))
           ) : (
             <div className="text-gray-400 text-center w-full py-24">暂无资源</div>
           )}
         </div>
       )}
+      <ResourceEditDialog
+        open={Boolean(editResource)}
+        onOpenChange={(v) => setEditResource(v ? editResource : null)}
+        resource={editResource ?? {}}
+        onSuccess={refetch}
+      />
     </div>
   );
 }
+
