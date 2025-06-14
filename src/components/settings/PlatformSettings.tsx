@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,28 +8,65 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Palette } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Save } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+
+const DEFAULT_PLATFORM = {
+  platformName: "EduGen",
+  platformDescription: "教育资源生成平台",
+  theme: "light",
+  language: "zh-CN",
+  enableRegistration: true,
+  enableFileUpload: true,
+  maxFileSize: "10",
+  supportedFileTypes: ".pdf,.docx,.txt,.md",
+  welcomeMessage: "欢迎使用EduGen教育资源生成平台！",
+  footerText: "© 2024 EduGen. All rights reserved."
+};
 
 export default function PlatformSettings() {
   const { toast } = useToast();
+  const isAdmin = useIsAdmin();
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    platformName: "EduGen",
-    platformDescription: "教育资源生成平台",
-    theme: "light",
-    language: "zh-CN",
-    enableRegistration: true,
-    enableFileUpload: true,
-    maxFileSize: "10",
-    supportedFileTypes: ".pdf,.docx,.txt,.md",
-    welcomeMessage: "欢迎使用EduGen教育资源生成平台！",
-    footerText: "© 2024 EduGen. All rights reserved.",
-  });
+  const [settings, setSettings] = useState(DEFAULT_PLATFORM);
 
+  // 获取平台设置
+  useEffect(() => {
+    async function fetchSettings() {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "main")
+        .maybeSingle();
+      if (data?.value) {
+        setSettings({ ...DEFAULT_PLATFORM, ...data.value });
+      }
+    }
+    fetchSettings();
+    // eslint-disable-next-line
+  }, []);
+
+  // 保存到 platform_settings
   const handleSave = async () => {
+    if (!isAdmin) {
+      toast({ title: "无权限", description: "只有管理员可以更改平台设置", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      // 这里可以添加保存平台设置的逻辑
+      // upsert 主配置 key: main
+      const { error } = await supabase
+        .from("platform_settings")
+        .upsert([
+          {
+            key: "main",
+            value: settings,
+            updated_at: new Date().toISOString(),
+          }
+        ], { onConflict: "key" });
+      if (error) throw error;
+
       toast({
         title: "平台设置已保存",
         description: "配置更新成功",
@@ -60,11 +97,12 @@ export default function PlatformSettings() {
               value={settings.platformName}
               onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
               placeholder="EduGen"
+              disabled={!isAdmin}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="language">默认语言</Label>
-            <Select value={settings.language} onValueChange={(value) => setSettings({ ...settings, language: value })}>
+            <Select value={settings.language} onValueChange={(value) => setSettings({ ...settings, language: value })} disabled={!isAdmin}>
               <SelectTrigger>
                 <SelectValue placeholder="选择语言" />
               </SelectTrigger>
@@ -84,12 +122,13 @@ export default function PlatformSettings() {
             value={settings.platformDescription}
             onChange={(e) => setSettings({ ...settings, platformDescription: e.target.value })}
             placeholder="教育资源生成平台"
+            disabled={!isAdmin}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="theme">主题设置</Label>
-          <Select value={settings.theme} onValueChange={(value) => setSettings({ ...settings, theme: value })}>
+          <Select value={settings.theme} onValueChange={(value) => setSettings({ ...settings, theme: value })} disabled={!isAdmin}>
             <SelectTrigger>
               <SelectValue placeholder="选择主题" />
             </SelectTrigger>
@@ -112,6 +151,7 @@ export default function PlatformSettings() {
               <Switch
                 checked={settings.enableRegistration}
                 onCheckedChange={(checked) => setSettings({ ...settings, enableRegistration: checked })}
+                disabled={!isAdmin}
               />
             </div>
             <div className="flex items-center justify-between">
@@ -122,6 +162,7 @@ export default function PlatformSettings() {
               <Switch
                 checked={settings.enableFileUpload}
                 onCheckedChange={(checked) => setSettings({ ...settings, enableFileUpload: checked })}
+                disabled={!isAdmin}
               />
             </div>
           </div>
@@ -137,6 +178,7 @@ export default function PlatformSettings() {
                 value={settings.maxFileSize}
                 onChange={(e) => setSettings({ ...settings, maxFileSize: e.target.value })}
                 placeholder="10"
+                disabled={!isAdmin}
               />
             </div>
             <div className="space-y-2">
@@ -146,6 +188,7 @@ export default function PlatformSettings() {
                 value={settings.supportedFileTypes}
                 onChange={(e) => setSettings({ ...settings, supportedFileTypes: e.target.value })}
                 placeholder=".pdf,.docx,.txt,.md"
+                disabled={!isAdmin}
               />
             </div>
           </div>
@@ -159,6 +202,7 @@ export default function PlatformSettings() {
             onChange={(e) => setSettings({ ...settings, welcomeMessage: e.target.value })}
             placeholder="输入欢迎消息..."
             className="min-h-[80px]"
+            disabled={!isAdmin}
           />
         </div>
 
@@ -169,14 +213,18 @@ export default function PlatformSettings() {
             value={settings.footerText}
             onChange={(e) => setSettings({ ...settings, footerText: e.target.value })}
             placeholder="© 2024 EduGen. All rights reserved."
+            disabled={!isAdmin}
           />
         </div>
 
-        <Button onClick={handleSave} disabled={loading} className="w-full md:w-auto">
-          <Save className="w-4 h-4 mr-2" />
-          {loading ? "保存中..." : "保存设置"}
-        </Button>
+        {isAdmin && (
+          <Button onClick={handleSave} disabled={loading} className="w-full md:w-auto">
+            <Save className="w-4 h-4 mr-2" />
+            {loading ? "保存中..." : "保存设置"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
 }
+

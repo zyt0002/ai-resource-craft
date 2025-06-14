@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Upload, Save } from "lucide-react";
 
 export default function UserSettings() {
@@ -17,16 +18,52 @@ export default function UserSettings() {
     fullName: profile?.full_name || "",
     username: profile?.username || "",
     email: user?.email || "",
+    avatarUrl: profile?.avatar_url || "",
   });
 
+  // 回显最新 profile
+  useEffect(() => {
+    setFormData({
+      fullName: profile?.full_name || "",
+      username: profile?.username || "",
+      email: user?.email || "",
+      avatarUrl: profile?.avatar_url || "",
+    });
+  }, [profile, user]);
+
+  // 头像上传占位（可接入 Supabase Storage）
+  const handleAvatarUpload = async () => {
+    toast({
+      title: "暂未实现",
+      description: "头像上传功能请后续开发",
+      variant: "default"
+    });
+  };
+
   const handleSave = async () => {
+    if (!profile?.id) return;
     setLoading(true);
     try {
-      // 这里可以添加更新用户信息的逻辑
+      // 更新 profiles 表
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: formData.fullName.trim(),
+          username: formData.username.trim(),
+          avatar_url: formData.avatarUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", profile.id);
+      if (error) throw error;
+
       toast({
         title: "设置已保存",
         description: "用户信息更新成功",
       });
+      // 提醒用户刷新/或自动刷新个人资料
+      // 此处建议重新 fetch，也可页面刷新或全局态管理
+      // 此处简单 reload
+      window.location.reload();
     } catch (error) {
       toast({
         title: "保存失败",
@@ -47,12 +84,12 @@ export default function UserSettings() {
       <CardContent className="space-y-6">
         <div className="flex items-center space-x-4">
           <Avatar className="h-20 w-20">
-            <AvatarImage src="" />
+            <AvatarImage src={formData.avatarUrl || ""} />
             <AvatarFallback className="text-lg">
               {formData.fullName?.charAt(0) || formData.username?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleAvatarUpload}>
             <Upload className="w-4 h-4 mr-2" />
             上传头像
           </Button>
@@ -99,3 +136,4 @@ export default function UserSettings() {
     </Card>
   );
 }
+
