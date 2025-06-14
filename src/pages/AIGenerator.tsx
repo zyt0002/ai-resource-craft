@@ -153,7 +153,7 @@ export default function AIGenerator() {
                 <Label htmlFor="prompt">生成提示</Label>
                 <Textarea
                   id="prompt"
-                  placeholder="请描述您想要生成的内容，例如：生成一份关于"植物光合作用"的小学科学课件..."
+                  placeholder="请描述您想要生成的内容，例如：生成一份关于植物光合作用的小学科学课件..."
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={4}
