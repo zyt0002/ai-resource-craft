@@ -32,15 +32,23 @@ const multimodalModels = [
 ];
 
 // 检查文件是否为图片
-function isImageFile(contentType: string): boolean {
-  return contentType.includes('image/');
+function isImageFile(contentType: string, fileName: string): boolean {
+  if (contentType.includes('image/')) return true;
+  // 通过文件扩展名判断
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+  return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
 }
 
-// 检查文件是否为纯文本文件
-function isTextFile(contentType: string): boolean {
-  return contentType.includes('text/') || 
-         contentType.includes('application/json') ||
-         contentType.includes('application/xml');
+// 检查文件是否为文本文件
+function isTextFile(contentType: string, fileName: string): boolean {
+  // 直接通过Content-Type判断
+  if (contentType.includes('text/')) return true;
+  if (contentType.includes('application/json')) return true;
+  if (contentType.includes('application/xml')) return true;
+  
+  // 通过文件扩展名判断常见的文本文件
+  const textExtensions = ['.txt', '.md', '.markdown', '.json', '.xml', '.csv', '.log', '.yml', '.yaml', '.ini', '.cfg', '.conf'];
+  return textExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
 }
 
 // 将图片转换为base64
@@ -88,10 +96,15 @@ async function getFileContent(fileUrl: string): Promise<string> {
     const contentType = response.headers.get('content-type') || '';
     console.log('文件类型:', contentType);
     
-    // 对于纯文本文件，直接读取文本内容
-    if (isTextFile(contentType)) {
+    // 从URL中提取文件名
+    const urlParts = fileUrl.split('/');
+    const fileName = urlParts[urlParts.length - 1] || '';
+    console.log('文件名:', fileName);
+    
+    // 优先通过文件扩展名和内容类型判断是否为文本文件
+    if (isTextFile(contentType, fileName)) {
       const textContent = await response.text();
-      console.log('文本文件内容长度:', textContent.length);
+      console.log('成功读取文本文件，内容长度:', textContent.length);
       return textContent;
     }
     
@@ -102,27 +115,31 @@ async function getFileContent(fileUrl: string): Promise<string> {
     console.log('文件大小:', fileSize, 'bytes');
     
     // 根据文件类型提供不同的处理信息
-    if (contentType.includes('application/pdf')) {
+    if (contentType.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf')) {
       return `检测到PDF文件（${fileSize}字节），但当前系统无法直接解析PDF内容。建议：
 1. 将PDF内容复制粘贴到输入框中
 2. 或者描述PDF的主要内容，我可以根据你的描述生成相关资料
 3. 如果是文字较少的PDF，可以截图上传`;
     } else if (contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || 
-               contentType.includes('application/msword')) {
+               contentType.includes('application/msword') ||
+               fileName.toLowerCase().endsWith('.docx') ||
+               fileName.toLowerCase().endsWith('.doc')) {
       return `检测到Word文档（${fileSize}字节），但当前系统无法直接解析Word文档内容。建议：
 1. 打开Word文档，复制文字内容并粘贴到输入框中
 2. 或者告诉我文档的主题和要点，我可以据此生成相关教学资料
 3. 如果文档包含重要图表，可以截图上传`;
     } else if (contentType.includes('application/vnd.ms-excel') || 
-               contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+               contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
+               fileName.toLowerCase().endsWith('.xlsx') ||
+               fileName.toLowerCase().endsWith('.xls')) {
       return `检测到Excel文件（${fileSize}字节），但当前系统无法直接解析Excel内容。建议：
 1. 将Excel中的关键数据复制粘贴到输入框中
 2. 或者描述表格的结构和主要数据，我可以生成相关的教学内容
 3. 如果需要保持表格格式，可以截图上传`;
-    } else if (contentType.includes('image/')) {
+    } else if (isImageFile(contentType, fileName)) {
       return `这是一个图片文件（${fileSize}字节）。如果选择了支持视觉的多模态模型（如Qwen2.5-VL），可以直接分析图片内容。`;
     } else {
-      return `检测到${contentType}类型文件（${fileSize}字节）。当前系统暂不支持直接解析此类文件。建议：
+      return `检测到${contentType || '未知'}类型文件（${fileSize}字节）。当前系统暂不支持直接解析此类文件。建议：
 1. 如果是文本内容，请复制粘贴到输入框中
 2. 或者描述文件的主要内容，我可以根据描述生成相关资料`;
     }
@@ -232,7 +249,11 @@ serve(async (req) => {
       const response = await fetch(fileUrl, { method: 'HEAD' });
       const contentType = response.headers.get('content-type') || '';
       
-      if (isImageFile(contentType)) {
+      // 从URL中提取文件名
+      const urlParts = fileUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1] || '';
+      
+      if (isImageFile(contentType, fileName)) {
         console.log('处理图片文件，使用多模态格式');
         const imageBase64 = await imageToBase64(fileUrl);
         if (imageBase64) {
@@ -263,7 +284,7 @@ serve(async (req) => {
         const fileContent = await getFileContent(fileUrl);
         messages.push({
           role: 'user',
-          content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。如果无法解析文件内容，请根据用户的描述和需求生成相应的教学资源。`
+          content: prompt + `\n\n文件内容:\n${fileContent}\n\n请根据上述文件内容和用户需求生成相关内容。`
         });
       }
     } else if (fileUrl) {
@@ -271,7 +292,7 @@ serve(async (req) => {
       const fileContent = await getFileContent(fileUrl);
       messages.push({
         role: 'user',
-        content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。如果无法解析文件内容，请根据用户的描述和需求生成相应的教学资源。`
+        content: prompt + `\n\n文件内容:\n${fileContent}\n\n请根据上述文件内容和用户需求生成相关内容。`
       });
     } else {
       messages.push({
