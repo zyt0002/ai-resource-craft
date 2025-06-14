@@ -8,9 +8,17 @@ type Resource = {
   type: "document" | "image" | "video" | "audio" | "other";
   previewUrl?: string;
   updatedAt: string;
+  file_path?: string;
+  file_type?: string;
 };
 
-export function ResourceCard({ resource }: { resource: Resource }) {
+export function ResourceCard({
+  resource,
+  onPreview
+}: {
+  resource: Resource;
+  onPreview?: () => void;
+}) {
   let Icon = File;
   if (resource.type === "document") Icon = FileText;
   if (resource.type === "image") Icon = FileImage;
@@ -36,7 +44,10 @@ export function ResourceCard({ resource }: { resource: Resource }) {
           <div className="text-xs mt-1 text-muted-foreground">{resource.updatedAt}</div>
         </div>
       </div>
-      <button className="mt-3 text-xs text-primary bg-accent rounded py-1 hover:bg-primary hover:text-primary-foreground transition w-full">
+      <button
+        className="mt-3 text-xs text-primary bg-accent rounded py-1 hover:bg-primary hover:text-primary-foreground transition w-full"
+        onClick={onPreview}
+      >
         预览 / 下载
       </button>
     </div>

@@ -5,14 +5,28 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Trash } from "lucide-react";
 import { useState } from "react";
 import ResourceEditDialog from "@/components/ResourceEditDialog";
+import ResourcePreviewDialog from "@/components/ResourcePreviewDialog";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 export default function ResourceManager() {
   const { profile } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [editResource, setEditResource] = useState<any>(null); // 当前正在编辑的资源
+  const [deleteResource, setDeleteResource] = useState<any>(null); // 待删除资源
+  const [previewResource, setPreviewResource] = useState<any>(null); // 预览资源
 
   // 拉取资源表，仅属于当前登录用户的资源
   const { data: resources, isLoading, refetch } = useQuery({
@@ -30,8 +44,24 @@ export default function ResourceManager() {
     enabled: !!profile?.id,
   });
 
-  // 刷新资源列表（例如：在其他页面保存新资源后可手动刷新）
+  // 刷新资源列表
   const handleRefresh = () => setRefreshKey((k) => k + 1);
+
+  // 删除资源
+  const handleRemove = async () => {
+    if (!deleteResource) return;
+    const { error } = await supabase
+      .from("resources")
+      .delete()
+      .eq("id", deleteResource.id);
+    setDeleteResource(null);
+    if (error) {
+      toast({ title: "删除失败", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "删除成功", description: "资源已被移除" });
+      refetch();
+    }
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto mt-8">
@@ -63,21 +93,60 @@ export default function ResourceManager() {
           {resources && resources.length > 0 ? (
             resources.map((res: any) => (
               <div key={res.id} className="relative group">
-                <ResourceCard resource={{
-                  id: res.id,
-                  title: res.title,
-                  type: res.type,
-                  updatedAt: res.updated_at?.slice(0, 10) || "",
-                  previewUrl: res.thumbnail_url
-                }} />
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="absolute right-3 top-3 z-10 opacity-0 group-hover:opacity-100 transition"
-                  onClick={() => setEditResource(res)}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
+                <ResourceCard
+                  resource={{
+                    id: res.id,
+                    title: res.title,
+                    type: res.type,
+                    updatedAt: res.updated_at?.slice(0, 10) || "",
+                    previewUrl: res.thumbnail_url,
+                    file_path: res.file_path,
+                    file_type: res.file_type,
+                  }}
+                  onPreview={() => setPreviewResource({
+                    id: res.id,
+                    title: res.title,
+                    type: res.type,
+                    previewUrl: res.thumbnail_url,
+                    file_path: res.file_path,
+                    file_type: res.file_type,
+                  })}
+                />
+                <div className="absolute right-3 top-3 z-10 flex opacity-0 group-hover:opacity-100 transition gap-1">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => setEditResource(res)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <AlertDialog open={!!deleteResource && deleteResource.id === res.id} onOpenChange={open => !open && setDeleteResource(null)}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setDeleteResource(res);
+                        }}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>确认删除？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          该操作无法撤销，将永久移除此资源。
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRemove}>删除</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             ))
           ) : (
@@ -91,7 +160,11 @@ export default function ResourceManager() {
         resource={editResource ?? {}}
         onSuccess={refetch}
       />
+      <ResourcePreviewDialog
+        open={!!previewResource}
+        onOpenChange={(open) => setPreviewResource(open ? previewResource : null)}
+        resource={previewResource}
+      />
     </div>
   );
 }
-
