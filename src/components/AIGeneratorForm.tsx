@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,8 +41,9 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" },
   ];
 
-  // 图片模型列表
+  // 图片模型列表，加入 Kwai-Kolors/Kolors
   const imageModelList = [
+    { value: "Kwai-Kolors/Kolors", label: "Kwai-Kolors/Kolors (硅基流动官方文生图)" },
     { value: "FLUX.1 Schnell", label: "FLUX.1 Schnell" },
     { value: "SD 3.5 Large", label: "SD 3.5 Large" }
   ];
@@ -62,7 +62,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     setGenerationType(value);
     // 当切换到图片生成时，自动选择图片模型
     if (value === "image" && !imageModelList.find(m => m.value === selectedModel)) {
-      setSelectedModel("FLUX.1 Schnell");
+      setSelectedModel("Kwai-Kolors/Kolors");
     }
     // 当切换到非图片生成时，如果当前是图片模型，则切换到文本模型
     if (value !== "image" && imageModelList.find(m => m.value === selectedModel)) {
@@ -123,7 +123,6 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
           setUploadedFileUrl(url);
           setUploadedFileName(fileName);
         }}
-        // Removed incorrect/unsupported props
       />
       
       <div className="space-y-2">
@@ -153,4 +152,3 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     </form>
   );
 }
-
