@@ -20,9 +20,11 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export default function ResourceManager() {
   const { profile } = useAuth();
+  const isAdmin = useIsAdmin();
   const [refreshKey, setRefreshKey] = useState(0);
   const [editResource, setEditResource] = useState<any>(null); // 当前正在编辑的资源
   const [deleteResource, setDeleteResource] = useState<any>(null); // 待删除资源
@@ -63,6 +65,14 @@ export default function ResourceManager() {
       refetch();
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="w-full max-w-2xl mx-auto mt-16 text-center text-lg text-muted-foreground p-12 border rounded-lg">
+        🚫 您没有权限访问资源管理功能，如需访问请联系管理员。
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto mt-8">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
@@ -8,8 +7,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export default function ResourceCategories() {
+  const isAdmin = useIsAdmin();
+
+  if (!isAdmin) {
+    return (
+      <div className="w-full max-w-2xl mx-auto mt-16 text-center text-lg text-muted-foreground p-12 border rounded-lg">
+        🚫 您没有权限访问分类管理功能，如需访问请联系管理员。
+      </div>
+    );
+  }
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 

@@ -3,8 +3,9 @@ import { BookOpen, Sparkles, FolderKanban, Users, Settings } from "lucide-react"
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
-const navItems = [
+const adminNavItems = [
   { title: "仪表盘", path: "/", icon: BookOpen },
   { title: "AI生成", path: "/ai-generator", icon: Sparkles },
   { title: "资源管理", path: "/resources", icon: FolderKanban },
@@ -13,9 +14,18 @@ const navItems = [
   { title: "系统设置", path: "/settings", icon: Settings },
 ];
 
+const userNavItems = [
+  { title: "仪表盘", path: "/", icon: BookOpen },
+  { title: "AI生成", path: "/ai-generator", icon: Sparkles },
+  { title: "系统设置", path: "/settings", icon: Settings },
+];
+
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const isAdmin = useIsAdmin();
+
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   return (
     <aside className={cn("transition-all h-[calc(100vh-4rem)] z-30 border-r bg-sidebar flex flex-col", collapsed ? "w-16" : "w-56")}>
