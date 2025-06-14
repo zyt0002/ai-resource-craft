@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AIGenerator() {
   const { profile } = useAuth();
@@ -17,7 +18,30 @@ export default function AIGenerator() {
   const [description, setDescription] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerate = async (prompt: string, type: string, file?: File) => {
+  // 获取AI生成历史
+  const { data: aiGenerations } = useQuery({
+    queryKey: ['ai-generations', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('ai_generations')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  const handleGenerate = async (data: {
+    prompt: string;
+    generationType: string;
+    model: string;
+    fileUrl: string | null;
+  }) => {
     if (!profile?.id) {
       toast({
         title: "请先登录",
@@ -33,12 +57,13 @@ export default function AIGenerator() {
     
     try {
       const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('type', type);
+      formData.append('prompt', data.prompt);
+      formData.append('type', data.generationType);
+      formData.append('model', data.model);
       formData.append('user_id', profile.id);
       
-      if (file) {
-        formData.append('file', file);
+      if (data.fileUrl) {
+        formData.append('file_url', data.fileUrl);
       }
 
       const response = await fetch('/functions/v1/ai-generate', {
@@ -52,7 +77,7 @@ export default function AIGenerator() {
 
       const result = await response.json();
       
-      if (type === 'image' && result.image) {
+      if (data.generationType === 'image' && result.image) {
         setGeneratedImageBase64(result.image);
       } else if (result.content) {
         setGeneratedContent(result.content);
@@ -121,7 +146,8 @@ export default function AIGenerator() {
 
         resourceData.file_path = uploadData.path;
         resourceData.file_type = 'image/png';
-        resourceData.thumbnail_url = `${supabase.supabaseUrl}/storage/v1/object/public/resources/${uploadData.path}`;
+        // 使用硬编码的Supabase URL
+        resourceData.thumbnail_url = `https://ncgfsntvrieiuynyqsgr.supabase.co/storage/v1/object/public/resources/${uploadData.path}`;
       } else if (generatedContent) {
         // 处理文字内容：直接保存到content字段
         resourceData.content = generatedContent;
@@ -174,7 +200,7 @@ export default function AIGenerator() {
                 <CardTitle>输入参数</CardTitle>
               </CardHeader>
               <CardContent>
-                <AIGeneratorForm onGenerate={handleGenerate} isGenerating={isGenerating} />
+                <AIGeneratorForm onGenerate={handleGenerate} loading={isGenerating} />
               </CardContent>
             </Card>
 
@@ -203,7 +229,7 @@ export default function AIGenerator() {
               <CardTitle>生成历史</CardTitle>
             </CardHeader>
             <CardContent>
-              <GenerationHistory />
+              <GenerationHistory aiGenerations={aiGenerations || []} />
             </CardContent>
           </Card>
         </TabsContent>
