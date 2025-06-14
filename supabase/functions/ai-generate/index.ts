@@ -111,38 +111,34 @@ serve(async (req) => {
     
     if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
 
-    // 统一兼容未选择/不支持时 fallback
     const targetModel = supportedModels.includes(model) ? model : "Qwen/Qwen2.5-7B-Instruct";
 
+    // 精简弱化后的 system prompt，只作为补充，不做硬性结构要求
     const systemPrompts = {
-      courseware: "你是一个专业的教学课件生成助手。请根据用户提供的主题和要求，生成结构化的课件内容，包括标题、要点、详细说明等。",
-      image: "你是一个图像描述生成助手。请根据用户需求生成详细的图像描述，用于教学插图或图表。",
-      document: "你是一个教学文档生成助手。请根据用户要求生成完整的教学文档，包括教案、练习题等。",
-      video: "你是一个视频脚本生成助手。请根据用户需求生成教学视频的脚本内容。",
-      audio: "你是一个音频内容生成助手。请根据用户需求生成音频教学内容的文本稿。",
+      courseware: "你是专业支持教学内容的AI助手。请优先参考用户输入指令，补充专业建议即可。",
+      image: "你是AI图像内容建议助手。请以用户需求为主，可适当补充优化建议。",
+      document: "你是教辅AI助手。请以用户指令为主生成教学文本，补充合理性建议即可。",
+      video: "你是脚本AI助手，输出风格与内容以用户指令为主。",
+      audio: "你是音频内容辅助助手，请将输出风格以用户意图为准。",
     };
 
-    // 构建消息数组
+    // 构建消息数组，system prompt 仅作补充
     const messages = [
       {
         role: 'system',
-        content: systemPrompts[generationType as keyof typeof systemPrompts] || systemPrompts.document
+        content: systemPrompts[generationType as keyof typeof systemPrompts] || "你是AI内容生成助手，请以用户输入为主要依据。"
       }
     ];
 
     // 处理用户消息和文件
     if (fileUrl && multimodalModels.includes(targetModel)) {
       console.log('使用多模态模型处理文件:', targetModel);
-      
-      // 检查文件类型
       const response = await fetch(fileUrl, { method: 'HEAD' });
       const contentType = response.headers.get('content-type') || '';
       
       if (isImageFile(contentType)) {
-        // 对于图片，使用多模态格式
         console.log('处理图片文件，使用多模态格式');
         const imageBase64 = await imageToBase64(fileUrl);
-        
         if (imageBase64) {
           messages.push({
             role: 'user',
@@ -160,32 +156,28 @@ serve(async (req) => {
             ]
           });
         } else {
-          // 图片处理失败，回退到文本模式
           const fileContent = await getFileContent(fileUrl);
           messages.push({
             role: 'user',
-            content: prompt + `\n\n用户上传的文件信息:\n${fileContent}\n\n请根据上述信息来生成相关的教学资源。`
+            content: prompt + `\n\n用户上传的文件信息:\n${fileContent}\n\n请根据上述信息来生成相关内容。`
           });
         }
       } else {
-        // 对于非图片文件，获取内容并以文本形式处理
-        console.log('处理非图片文件');
+        // 非图片文件仍然走文本描述
         const fileContent = await getFileContent(fileUrl);
         messages.push({
           role: 'user',
-          content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`
+          content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关内容。`
         });
       }
     } else if (fileUrl) {
-      // 非多模态模型，使用文本描述
-      console.log('使用文本模型处理文件');
+      // 非多模态模型，仍然拼接文件信息到 user prompt
       const fileContent = await getFileContent(fileUrl);
       messages.push({
         role: 'user',
-        content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`
+        content: prompt + `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请结合上述内容生成相关资源。`
       });
     } else {
-      // 没有文件，直接使用提示
       messages.push({
         role: 'user',
         content: prompt
