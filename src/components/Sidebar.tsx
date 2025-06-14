@@ -1,4 +1,3 @@
-
 import { BookOpen, Sparkles, FolderKanban, Users, Settings } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -17,15 +16,20 @@ const adminNavItems = [
 const userNavItems = [
   { title: "仪表盘", path: "/", icon: BookOpen },
   { title: "AI生成", path: "/ai-generator", icon: Sparkles },
+  { title: "资源管理", path: "/resources", icon: FolderKanban },
+  { title: "分类管理", path: "/categories", icon: Users },
+  { title: "实时协作", path: "/collaborate", icon: Users },
   { title: "系统设置", path: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  // NOTE: 这里 isAdmin 只用来页面逻辑控制，用户菜单都一样
   const isAdmin = useIsAdmin();
 
-  const navItems = isAdmin ? adminNavItems : userNavItems;
+  // 普通用户和管理员导航相同
+  const navItems = userNavItems;
 
   return (
     <aside className={cn("transition-all h-[calc(100vh-4rem)] z-30 border-r bg-sidebar flex flex-col", collapsed ? "w-16" : "w-56")}>
