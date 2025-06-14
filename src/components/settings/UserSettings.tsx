@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, Save } from "lucide-react";
+import { useUploadToSupabase } from "@/hooks/useUploadToSupabase";
 
 export default function UserSettings() {
   const { profile, user } = useAuth();
@@ -20,6 +21,8 @@ export default function UserSettings() {
     email: user?.email || "",
     avatarUrl: profile?.avatar_url || "",
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, uploading } = useUploadToSupabase("avatars"); // 存储到 avatars bucket
 
   // 回显最新 profile
   useEffect(() => {
@@ -31,27 +34,76 @@ export default function UserSettings() {
     });
   }, [profile, user]);
 
-  // 头像上传占位（可接入 Supabase Storage）
-  const handleAvatarUpload = async () => {
-    toast({
-      title: "暂未实现",
-      description: "头像上传功能请后续开发",
-      variant: "default"
-    });
+  // 选择本地图片并上传到 Supabase Storage
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "不支持的图片格式",
+        description: "请选择 JPG/PNG/JPEG/GIF 格式的图片",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const publicUrl = await uploadFile(file);
+      if (publicUrl) {
+        setFormData((prev) => ({ ...prev, avatarUrl: publicUrl }));
+        toast({
+          title: "头像上传成功",
+          description: "新头像即将保存到个人资料",
+        });
+        // 自动保存头像变化
+        saveAvatarUrl(publicUrl);
+      }
+    } catch (error) {
+      toast({
+        title: "上传头像失败",
+        description: "请重试其他图片",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 更新头像字段
+  const saveAvatarUrl = async (avatarUrl: string) => {
+    if (!profile?.id) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+        .eq("id", profile.id);
+      if (error) throw error;
+
+      toast({
+        title: "头像已更新",
+        description: "个人头像已保存",
+      });
+      window.location.reload();
+    } catch (error) {
+      toast({
+        title: "头像保存失败",
+        description: "请稍后重试",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = async () => {
     if (!profile?.id) return;
     setLoading(true);
     try {
-      // 更新 profiles 表
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: formData.fullName.trim(),
           username: formData.username.trim(),
           avatar_url: formData.avatarUrl,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", profile.id);
       if (error) throw error;
@@ -60,9 +112,6 @@ export default function UserSettings() {
         title: "设置已保存",
         description: "用户信息更新成功",
       });
-      // 提醒用户刷新/或自动刷新个人资料
-      // 此处建议重新 fetch，也可页面刷新或全局态管理
-      // 此处简单 reload
       window.location.reload();
     } catch (error) {
       toast({
@@ -89,10 +138,25 @@ export default function UserSettings() {
               {formData.fullName?.charAt(0) || formData.username?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <Button variant="outline" size="sm" onClick={handleAvatarUpload}>
-            <Upload className="w-4 h-4 mr-2" />
-            上传头像
-          </Button>
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarChange}
+              disabled={uploading || loading}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || loading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {uploading ? "上传中..." : "上传头像"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -136,4 +200,3 @@ export default function UserSettings() {
     </Card>
   );
 }
-
