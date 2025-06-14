@@ -11,6 +11,7 @@ import ResourceManager from "./pages/ResourceManager";
 import ResourceCategories from "./pages/ResourceCategories";
 import Collaborate from "./pages/Collaborate";
 import Settings from "./pages/Settings";
+import Layout from "@/components/Layout";
 
 const queryClient = new QueryClient();
 
@@ -20,16 +21,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/ai-generator" element={<AIGenerator />} />
-          <Route path="/resources" element={<ResourceManager />} />
-          <Route path="/categories" element={<ResourceCategories />} />
-          <Route path="/collaborate" element={<Collaborate />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/ai-generator" element={<AIGenerator />} />
+            <Route path="/resources" element={<ResourceManager />} />
+            <Route path="/categories" element={<ResourceCategories />} />
+            <Route path="/collaborate" element={<Collaborate />} />
+            <Route path="/settings" element={<Settings />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Layout>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
