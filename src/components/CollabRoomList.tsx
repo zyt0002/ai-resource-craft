@@ -10,38 +10,16 @@ export default function CollabRoomList() {
   const { profile } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
 
-  // 查询本人关联的房间
-  const { data: rooms, isLoading: loadingRooms, refetch } = useQuery({
-    queryKey: ["collab-myrooms", profile?.id],
+  // 查询所有房间，当前登录用户均可见
+  const { data: rooms, isLoading: loadingRooms } = useQuery({
+    queryKey: ["collab-allrooms"],
     queryFn: async () => {
-      if (!profile?.id) return [];
-      // 本人是 owner 的房间
-      const { data: ownRooms } = await supabase
+      // 获取所有房间
+      const { data: allRooms, error } = await supabase
         .from("collab_rooms")
         .select("*")
-        .eq("owner_id", profile.id);
-
-      // 本人为成员的房间
-      const { data: memberships } = await supabase
-        .from("collab_room_members")
-        .select("room_id")
-        .eq("user_id", profile.id);
-
-      const memberRoomIds: string[] = [
-        ...(memberships?.map((m: any) => m.room_id) ?? []),
-      ];
-
-      // 合并本人房间和成员房间
-      const allRoomIds = Array.from(
-        new Set([...(ownRooms?.map((r: any) => r.id) ?? []), ...memberRoomIds])
-      );
-      if (allRoomIds.length === 0) return [];
-
-      const { data: allRooms } = await supabase
-        .from("collab_rooms")
-        .select("*")
-        .in("id", allRoomIds);
-
+        .order("created_at", { ascending: false });
+      if (error) throw error;
       return allRooms ?? [];
     },
     enabled: !!profile?.id,
@@ -59,7 +37,7 @@ export default function CollabRoomList() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selected,
+    enabled: !!selected && !!profile?.id,
   });
 
   useEffect(() => {
@@ -84,7 +62,7 @@ export default function CollabRoomList() {
             </button>
           ))
         ) : (
-          <span className="text-gray-400">暂无我的协作房间</span>
+          <span className="text-gray-400">暂无协作房间</span>
         )}
       </div>
       {selected && (
