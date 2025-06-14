@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -25,6 +24,7 @@ const supportedModels = [
   "Qwen/Qwen3-14B",
   "Qwen/Qwen2.5-14B-Instruct",
   "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+  "Kwai-Kolors/Kolors"
 ];
 
 // 多模态支持的模型
@@ -110,6 +110,56 @@ serve(async (req) => {
     console.log('收到请求:', { prompt, generationType, model, fileUrl });
     
     if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
+
+    // 图片生成功能：优先处理 Kwai-Kolors/Kolors
+    // generationType === "image" 并且模型为 Kwai-Kolors/Kolors 时，走特定 API
+    if (generationType === "image" && model === "Kwai-Kolors/Kolors") {
+      console.log('[AI-Generate] 使用 Kwai-Kolors/Kolors 图片生成模型');
+      // 根据硅基流动官方API文档，使用对应接口：
+      // https://api.siliconflow.cn/v1/images/generations
+      const imageResp = await fetch("https://api.siliconflow.cn/v1/images/generations", {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "Kwai-Kolors/Kolors",
+          prompt,
+          n: 1,
+          size: "1024x1024", // 默认尺寸，如需自定义可更改
+          response_format: "b64_json"
+        })
+      });
+      if (!imageResp.ok) {
+        console.error('图片生成API返回异常:', imageResp.status, await imageResp.text());
+        throw new Error(`图片生成失败: ${imageResp.statusText}`);
+      }
+      const imageResData = await imageResp.json();
+      // 官方文档返回 { data: [{ b64_json: ... }] }
+      const imageData = 
+        imageResData?.data?.[0]?.b64_json
+        ? `data:image/png;base64,${imageResData.data[0].b64_json}`
+        : null;
+
+      if (!imageData) {
+        throw new Error('图片API未返回有效图片');
+      }
+
+      console.log('图片生成成功，返回base64长度:', imageData.length);
+
+      return new Response(JSON.stringify({
+        success: true,
+        model: "Kwai-Kolors/Kolors",
+        generationType,
+        imageBase64: imageData,
+        content: "", // 不返回文本内容
+        fileProcessed: false,
+        multimodalUsed: false
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const targetModel = supportedModels.includes(model) ? model : "Qwen/Qwen2.5-7B-Instruct";
 
