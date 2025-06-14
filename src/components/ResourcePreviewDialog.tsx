@@ -28,9 +28,11 @@ export default function ResourcePreviewDialog({
   useEffect(() => {
     setTextContent(null);
 
+    // 若本地 content 没有内容，再尝试 fetch
     if (
       resource &&
       resource.type === "document" &&
+      !resource.content && // 仅在本地没有内容时 fetch
       resource.file_type &&
       (resource.file_type.startsWith("text/") || resource.file_type === "application/json") &&
       resource.previewUrl
@@ -43,6 +45,18 @@ export default function ResourcePreviewDialog({
   }, [resource]);
 
   if (!resource) return null;
+
+  // 兼容文件类型不规范的情况
+  const isTextDoc =
+    resource.type === "document" &&
+    (
+      resource.file_type?.startsWith("text/") ||
+      resource.file_type === "application/json" ||
+      resource.file_type === undefined ||
+      resource.file_type === "" ||
+      // fallback: 标题有.txt/.md/.json后缀也认为是文本
+      /\.(txt|md|json)$/i.test(resource.title)
+    );
 
   const renderPreview = () => {
     if (resource.type === "image" && resource.previewUrl) {
@@ -70,28 +84,26 @@ export default function ResourcePreviewDialog({
         </video>
       );
     }
-    // 新增：本地文本内容直接渲染
-    if (
-      resource.type === "document" &&
-      (resource.file_type?.startsWith("text/") || resource.file_type === "application/json")
-    ) {
+    // ⚡️【文本类文件直接渲染】
+    if (isTextDoc) {
       if (resource.content) {
-        // 本地直接有内容
         return (
-          <pre className="bg-muted px-4 py-3 rounded overflow-auto text-sm max-h-[60vh]">{resource.content}</pre>
+          <pre className="bg-muted px-4 py-3 rounded overflow-auto text-sm max-h-[60vh] whitespace-pre-wrap">{resource.content}</pre>
         );
       }
       if (resource.previewUrl) {
-        // 否则继续走 fetch 逻辑
         if (textContent === null) {
           return (
             <div className="py-8 text-center text-muted-foreground">正在加载内容…</div>
           );
         }
         return (
-          <pre className="bg-muted px-4 py-3 rounded overflow-auto text-sm max-h-[60vh]">{textContent}</pre>
+          <pre className="bg-muted px-4 py-3 rounded overflow-auto text-sm max-h-[60vh] whitespace-pre-wrap">{textContent}</pre>
         );
       }
+      return (
+        <div className="text-center text-muted-foreground py-12">暂无内容可预览。</div>
+      );
     }
     // PDF 预览
     if (
@@ -114,30 +126,36 @@ export default function ResourcePreviewDialog({
     );
   };
 
+  // 只要有 content 或可用链接就允许下载
+  const canDownload = !!(resource?.previewUrl || (isTextDoc && resource?.content));
+
   const handleDownload = () => {
+    // 1. 有 previewUrl链接，直接跳转
     if (resource?.previewUrl) {
       window.open(resource.previewUrl, "_blank");
       return;
     }
-    // 若本地有内容
-    if (
-      resource?.type === "document" &&
-      resource?.content &&
-      (resource.file_type?.startsWith("text/") || resource.file_type === "application/json")
-    ) {
+    // 2. 有文本内容，允许本地导出，自动判断文件后缀
+    if (isTextDoc && resource?.content) {
+      let suffix = ".txt";
+      if (/\.md$/i.test(resource.title)) {
+        suffix = ".md";
+      } else if (/\.json$/i.test(resource.title)) {
+        suffix = ".json";
+      }
       const blob = new Blob([resource.content], {
         type: resource.file_type || "text/plain",
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = resource.title + (resource.file_type === "application/json"
-        ? ".json"
-        : ".txt");
+      a.download = resource.title.endsWith(suffix)
+        ? resource.title
+        : resource.title + suffix;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(url), 600);
     }
   };
 
@@ -152,9 +170,7 @@ export default function ResourcePreviewDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             关闭
           </Button>
-          {(resource.previewUrl ||
-            (resource.content &&
-              (resource.file_type?.startsWith("text/") || resource.file_type === "application/json"))) && (
+          {canDownload && (
             <Button onClick={handleDownload}>
               <Download className="mr-2 w-4 h-4" />
               下载
