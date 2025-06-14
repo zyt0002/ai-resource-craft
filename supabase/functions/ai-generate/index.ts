@@ -27,6 +27,50 @@ const supportedModels = [
   "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
 ];
 
+// 从URL获取文件内容
+async function getFileContent(fileUrl: string): Promise<string> {
+  try {
+    console.log('正在获取文件内容:', fileUrl);
+    const response = await fetch(fileUrl);
+    
+    if (!response.ok) {
+      throw new Error(`获取文件失败: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    console.log('文件类型:', contentType);
+    
+    // 对于文本文件，直接读取文本内容
+    if (contentType.includes('text/')) {
+      const textContent = await response.text();
+      console.log('文本文件内容长度:', textContent.length);
+      return textContent;
+    }
+    
+    // 对于其他类型的文件，返回文件信息
+    const arrayBuffer = await response.arrayBuffer();
+    const fileSize = arrayBuffer.byteLength;
+    
+    console.log('文件大小:', fileSize, 'bytes');
+    
+    // 根据文件类型提供不同的处理信息
+    if (contentType.includes('application/pdf')) {
+      return `这是一个PDF文件，大小为${fileSize}字节。由于技术限制，无法直接读取PDF内容，请用户提供文件的关键信息或将内容复制到提示中。`;
+    } else if (contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') || 
+               contentType.includes('application/msword')) {
+      return `这是一个Word文档(.docx/.doc)，大小为${fileSize}字节。由于技术限制，无法直接读取Word文档内容，请用户将文档内容复制到提示中，或者提供文档的主要内容概要。`;
+    } else if (contentType.includes('image/')) {
+      return `这是一个图片文件，大小为${fileSize}字节。请根据用户的描述或要求来生成相关的教学内容。`;
+    } else {
+      return `这是一个${contentType}类型的文件，大小为${fileSize}字节。由于技术限制，无法直接读取此类型文件的内容。`;
+    }
+    
+  } catch (error) {
+    console.error('获取文件内容失败:', error);
+    return `无法获取文件内容，错误: ${error.message}。请确认文件是否可以正常访问，或者将文件内容直接复制到提示中。`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,10 +96,11 @@ serve(async (req) => {
     // 构建用户消息
     let userContent = prompt;
     
-    // 如果有上传的文件，添加文件信息到提示中
+    // 如果有上传的文件，获取文件内容
     if (fileUrl) {
       console.log('检测到上传文件:', fileUrl);
-      userContent += `\n\n注意：用户上传了一个文件，文件URL为：${fileUrl}。请根据这个文件的内容来生成相关内容。如果是图片文件，请描述图片内容并结合图片生成相关教学材料。如果是文档文件，请基于文档内容生成相应的教学资源。`;
+      const fileContent = await getFileContent(fileUrl);
+      userContent += `\n\n用户上传的文件内容或信息:\n${fileContent}\n\n请根据上述文件内容来生成相关的教学资源。`;
     }
 
     const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
