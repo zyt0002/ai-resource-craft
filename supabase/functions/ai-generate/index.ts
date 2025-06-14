@@ -26,13 +26,17 @@ const supportedModels = [
   "Kwai-Kolors/Kolors",
   "FLUX.1 Schnell",
   "SD 3.5 Large",
-  "black-forest-labs/FLUX.1-schnell", // 新增
+  "black-forest-labs/FLUX.1-schnell",
 ];
 
 const fluxLikeModels = [
   "FLUX.1 Schnell",
   "black-forest-labs/FLUX.1-schnell",
   "SD 3.5 Large",
+];
+
+const multimodalModels = [
+  "Qwen/Qwen2.5-VL-32B-Instruct",
 ];
 
 // 检查文件是否为图片
@@ -127,9 +131,8 @@ serve(async (req) => {
     
     if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
 
-    // ======================= 图片生成功能 优化 ======================
+    // ======================= 图片生成功能 ======================
     if (generationType === "image") {
-      // 优先 FLUX/SD 等直接调用硅基流动图片API，兼容黑森林FLUX.1
       let imageModel = "black-forest-labs/FLUX.1-schnell";
       if (model && fluxLikeModels.includes(model)) {
         imageModel = "black-forest-labs/FLUX.1-schnell";
@@ -139,7 +142,6 @@ serve(async (req) => {
         imageModel = "SD 3.5 Large";
       }
 
-      // black-forest-labs/FLUX.1-schnell 及 SD 3.5、Kolors 走统一图片生成 API
       console.log(`[AI-Generate] 使用图片生成功能: ${imageModel}`);
       const resp = await fetch("https://api.siliconflow.cn/v1/images/generations", {
         method: "POST",
@@ -201,10 +203,10 @@ serve(async (req) => {
       });
     }
 
-    // =============== 其余原有文本/多模态等逻辑不变 ================
+    // =============== 文本生成逻辑 ================
     const targetModel = supportedModels.includes(model) ? model : "Qwen/Qwen2.5-7B-Instruct";
 
-    // 精简弱化后的 system prompt，只作为补充，不做硬性结构要求
+    // 系统提示
     const systemPrompts = {
       courseware: "你是专业支持教学内容的AI助手。请优先参考用户输入指令，补充专业建议即可。",
       image: "你是AI图像内容建议助手。请以用户需求为主，可适当补充优化建议。",
@@ -213,7 +215,7 @@ serve(async (req) => {
       audio: "你是音频内容辅助助手，请将输出风格以用户意图为准。",
     };
 
-    // 构建消息数组，system prompt 仅作补充
+    // 构建消息数组
     const messages = [
       {
         role: 'system',
