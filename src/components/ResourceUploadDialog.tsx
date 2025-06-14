@@ -8,6 +8,7 @@ import { useUploadToSupabase } from "@/hooks/useUploadToSupabase";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { TablesInsert } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/useAuth"; // 新增: 获取当前登录用户
 
 export default function ResourceUploadDialog({
   open,
@@ -28,6 +29,8 @@ export default function ResourceUploadDialog({
     file: File;
   } | null>(null);
   const { toast } = useToast();
+
+  const { profile } = useAuth(); // 新增：获取当前用户 profile
 
   // 资源类型
   const resourceTypes = [
@@ -55,17 +58,23 @@ export default function ResourceUploadDialog({
       toast({ title: "请先上传文件", variant: "destructive" });
       return;
     }
+    if (!profile?.id) {
+      toast({ title: "未检测到用户，请重新登录", variant: "destructive" });
+      return;
+    }
     setUploading(true);
 
-    // 类型断言保证 type 字段正确
+    // 类型断言保证 type 字段正确，补充 owner_id 字段
     const insertObj: TablesInsert<"resources"> = {
       title: title.trim() || selectedFile.name,
       type: type,
       file_path: selectedFile.url,
       file_type: selectedFile.type,
       thumbnail_url: type === "image" ? selectedFile.url : null,
+      owner_id: profile.id // ★★★ RLS 关键，必须传入
       // 其他可选字段按需添加
     };
+
     const { error } = await supabase.from("resources").insert(insertObj);
     setUploading(false);
     if (error) {
@@ -136,3 +145,4 @@ export default function ResourceUploadDialog({
     </Dialog>
   );
 }
+
