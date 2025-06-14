@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// 支持的模型白名单
 const supportedModels = [
   "Qwen/Qwen2.5-7B-Instruct",
   "Tongyi-Zhiwen/QwenLong-L1-32B",
@@ -24,14 +23,16 @@ const supportedModels = [
   "Qwen/Qwen3-14B",
   "Qwen/Qwen2.5-14B-Instruct",
   "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
-  "Kwai-Kolors/Kolors"
+  "Kwai-Kolors/Kolors",
+  "FLUX.1 Schnell",
+  "SD 3.5 Large",
+  "black-forest-labs/FLUX.1-schnell", // 新增
 ];
 
-// 多模态支持的模型
-const multimodalModels = [
-  "Qwen/Qwen2.5-VL-32B-Instruct",
-  "THUDM/GLM-Z1-32B-0414",
-  "THUDM/GLM-Z1-Rumination-32B-0414",
+const fluxLikeModels = [
+  "FLUX.1 Schnell",
+  "black-forest-labs/FLUX.1-schnell",
+  "SD 3.5 Large",
 ];
 
 // 检查文件是否为图片
@@ -111,46 +112,56 @@ serve(async (req) => {
     
     if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
 
-    // 图片生成功能：优先处理 Kwai-Kolors/Kolors
-    // generationType === "image" 并且模型为 Kwai-Kolors/Kolors 时，走特定 API
-    if (generationType === "image" && model === "Kwai-Kolors/Kolors") {
-      console.log('[AI-Generate] 使用 Kwai-Kolors/Kolors 图片生成模型');
-      // 根据硅基流动官方API文档，使用对应接口：
-      // https://api.siliconflow.cn/v1/images/generations
-      const imageResp = await fetch("https://api.siliconflow.cn/v1/images/generations", {
+    // ======================= 图片生成功能 优化 ======================
+    if (generationType === "image") {
+      // 优先 FLUX/SD 等直接调用硅基流动图片API，兼容黑森林FLUX.1
+      let imageModel = "black-forest-labs/FLUX.1-schnell";
+      if (model && fluxLikeModels.includes(model)) {
+        imageModel = "black-forest-labs/FLUX.1-schnell";
+      } else if (model && model === "Kwai-Kolors/Kolors") {
+        imageModel = "Kwai-Kolors/Kolors";
+      } else if (model && model === "SD 3.5 Large") {
+        imageModel = "SD 3.5 Large";
+      }
+
+      // black-forest-labs/FLUX.1-schnell 及 SD 3.5、Kolors 走统一图片生成 API
+      console.log(`[AI-Generate] 使用图片生成功能: ${imageModel}`);
+      const resp = await fetch("https://api.siliconflow.cn/v1/images/generations", {
         method: "POST",
         headers: {
           'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "Kwai-Kolors/Kolors",
-          prompt,
-          n: 1,
-          size: "1024x1024", // 默认尺寸，如需自定义可更改
-          response_format: "b64_json"
-        })
+          model: imageModel,
+          prompt: prompt,
+          image_size: "1024x1024",
+          batch_size: 1,
+          num_inference_steps: 20,
+        }),
       });
-      if (!imageResp.ok) {
-        console.error('图片生成API返回异常:', imageResp.status, await imageResp.text());
-        throw new Error(`图片生成失败: ${imageResp.statusText}`);
+
+      if (!resp.ok) {
+        console.error('图片生成API返回异常:', resp.status, await resp.text());
+        throw new Error(`图片生成失败: ${resp.statusText}`);
       }
-      const imageResData = await imageResp.json();
-      // 官方文档返回 { data: [{ b64_json: ... }] }
-      const imageData = 
+      const imageResData = await resp.json();
+
+      // 不同模型结构稍有不同，Kwai/FLUX都返回data:[{b64_json:...}]
+      const imageData =
         imageResData?.data?.[0]?.b64_json
         ? `data:image/png;base64,${imageResData.data[0].b64_json}`
         : null;
 
       if (!imageData) {
-        throw new Error('图片API未返回有效图片');
+        throw new Error("图片API未返回有效图片。返回内容: " + JSON.stringify(imageResData));
       }
 
       console.log('图片生成成功，返回base64长度:', imageData.length);
 
       return new Response(JSON.stringify({
         success: true,
-        model: "Kwai-Kolors/Kolors",
+        model: imageModel,
         generationType,
         imageBase64: imageData,
         content: "", // 不返回文本内容
@@ -161,6 +172,7 @@ serve(async (req) => {
       });
     }
 
+    // =============== 其余原有文本/多模态等逻辑不变 ================
     const targetModel = supportedModels.includes(model) ? model : "Qwen/Qwen2.5-7B-Instruct";
 
     // 精简弱化后的 system prompt，只作为补充，不做硬性结构要求
