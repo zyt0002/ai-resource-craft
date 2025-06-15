@@ -28,31 +28,61 @@ export default function VoiceToTextPanel() {
     setErrorMsg(null);
     setRecognizeLoading(true);
     setResultText("");
+    
     try {
+      console.log("[VoiceToText] 开始上传文件:", audioFile.name, audioFile.size);
+      
       const formData = new FormData();
       formData.append("file", audioFile);
 
+      console.log("[VoiceToText] 发送请求到: /functions/v1/voice-to-text");
+      
       const res = await fetch("/functions/v1/voice-to-text", {
         method: "POST",
         body: formData,
       });
 
-      // 新增：先判断 content-type 是否为 json
+      console.log("[VoiceToText] 响应状态:", res.status, res.statusText);
+      console.log("[VoiceToText] 响应头:", Object.fromEntries(res.headers.entries()));
+
+      // 检查响应状态
+      if (res.status === 404) {
+        setErrorMsg("语音转文字服务未找到（404），请等待Edge Function部署完成");
+        return;
+      }
+
+      // 检查 content-type 是否为 json
       const respContentType = res.headers.get("content-type") || "";
+      console.log("[VoiceToText] 响应Content-Type:", respContentType);
+      
       if (!respContentType.includes("application/json")) {
         const text = await res.text();
-        setErrorMsg(`服务响应异常（不是JSON）：${text}`);
+        console.error("[VoiceToText] 非JSON响应内容:", text);
+        
+        if (res.status >= 500) {
+          setErrorMsg(`服务器内部错误 (${res.status})：${text.substring(0, 200)}`);
+        } else if (res.status === 404) {
+          setErrorMsg("语音转文字服务未找到，请检查Edge Function是否正确部署");
+        } else {
+          setErrorMsg(`服务响应异常 (${res.status})：${text.substring(0, 200)}`);
+        }
         return;
       }
 
       const result = await res.json();
+      console.log("[VoiceToText] 解析结果:", result);
+      
       if (res.ok && result.text) {
         setResultText(result.text);
+        console.log("[VoiceToText] 识别成功:", result.text);
       } else {
-        setErrorMsg(result.error || "识别失败");
+        const errorDetail = result.detail ? ` (详情: ${result.detail})` : "";
+        setErrorMsg((result.error || "识别失败") + errorDetail);
+        console.error("[VoiceToText] 识别失败:", result);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "网络错误");
+      console.error("[VoiceToText] 请求异常:", err);
+      setErrorMsg(`网络错误: ${err.message}`);
     } finally {
       setRecognizeLoading(false);
     }
@@ -98,7 +128,9 @@ export default function VoiceToTextPanel() {
       </div>
 
       {errorMsg && (
-        <div className="text-sm text-destructive">{errorMsg}</div>
+        <div className="text-sm text-destructive bg-red-50 p-2 rounded border">
+          {errorMsg}
+        </div>
       )}
       {resultText && (
         <div className="space-y-2 mt-2">
