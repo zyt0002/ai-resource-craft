@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,22 +58,40 @@ export function ArticleUpload() {
   };
 
   const processFileContent = (content: string, fileName: string): { title: string; content: string; summary: string } => {
+    // 清理内容，移除可能引起问题的字符
+    const cleanContent = content
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // 移除控制字符
+      .replace(/\0/g, '') // 移除null字符
+      .trim();
+    
     // 自动生成标题（如果未设置）
     const title = formData.title || fileName.replace(/\.[^/.]+$/, "");
     
     // 自动生成摘要（取前200字符）
-    const summary = formData.summary || content.substring(0, 200) + (content.length > 200 ? '...' : '');
+    const summary = formData.summary || cleanContent.substring(0, 200) + (cleanContent.length > 200 ? '...' : '');
     
-    return { title, content, summary };
+    return { title, content: cleanContent, summary };
   };
 
   const handleFileUpload = async (file: File) => {
-    const reader = new FileReader();
-    
     return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      
       reader.onload = async (e) => {
         try {
-          const content = e.target?.result as string;
+          let content = '';
+          const result = e.target?.result;
+          
+          if (typeof result === 'string') {
+            content = result;
+          } else if (result instanceof ArrayBuffer) {
+            // 如果是二进制数据，尝试解码为UTF-8
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+            content = decoder.decode(result);
+          }
+          
+          console.log('文件读取成功:', { fileName: file.name, contentLength: content.length });
+          
           const { title, content: processedContent, summary } = processFileContent(content, file.name);
           
           const { error } = await supabase
@@ -91,15 +108,32 @@ export function ArticleUpload() {
               status: 'active',
             });
 
-          if (error) throw error;
+          if (error) {
+            console.error('数据库插入错误:', error);
+            throw error;
+          }
+          
+          console.log('文章保存成功:', title);
           resolve();
         } catch (error) {
+          console.error('文件处理错误:', error);
           reject(error);
         }
       };
 
-      reader.onerror = () => reject(new Error('文件读取失败'));
-      reader.readAsText(file, 'UTF-8');
+      reader.onerror = () => {
+        console.error('文件读取失败:', file.name);
+        reject(new Error('文件读取失败'));
+      };
+      
+      // 优先使用 readAsText 并指定编码
+      try {
+        reader.readAsText(file, 'UTF-8');
+      } catch (error) {
+        console.error('读取文件时出错:', error);
+        // 如果 readAsText 失败，尝试 readAsArrayBuffer
+        reader.readAsArrayBuffer(file);
+      }
     });
   };
 
@@ -116,10 +150,30 @@ export function ArticleUpload() {
     try {
       if (files && files.length > 0) {
         // 批量上传文件
+        let successCount = 0;
+        let errorCount = 0;
+        
         for (let i = 0; i < files.length; i++) {
-          await handleFileUpload(files[i]);
+          try {
+            await handleFileUpload(files[i]);
+            successCount++;
+          } catch (error) {
+            console.error(`文件 ${files[i].name} 上传失败:`, error);
+            errorCount++;
+          }
         }
-        toast({ title: `成功上传 ${files.length} 个文件` });
+        
+        if (successCount > 0) {
+          toast({ 
+            title: `成功上传 ${successCount} 个文件` + (errorCount > 0 ? `，${errorCount} 个文件上传失败` : '') 
+          });
+        } else {
+          toast({ 
+            title: "文件上传失败", 
+            description: "请检查文件格式或内容是否正确",
+            variant: "destructive" 
+          });
+        }
       } else {
         // 手动输入的文章
         const { error } = await supabase
@@ -154,9 +208,10 @@ export function ArticleUpload() {
       setFiles(null);
       
     } catch (error: any) {
+      console.error('上传失败:', error);
       toast({
         title: "上传失败",
-        description: error.message,
+        description: error.message || "请检查文件内容或网络连接",
         variant: "destructive",
       });
     } finally {
@@ -258,7 +313,7 @@ export function ArticleUpload() {
                   id="file-upload"
                   type="file"
                   multiple
-                  accept=".txt,.md,.doc,.docx"
+                  accept=".txt,.md,.doc,.docx,.csv"
                   onChange={(e) => setFiles(e.target.files)}
                   className="hidden"
                 />
@@ -270,7 +325,7 @@ export function ArticleUpload() {
                   <p className="text-sm text-muted-foreground text-center">
                     点击选择文件或拖拽文件到此处
                     <br />
-                    支持 .txt, .md, .doc, .docx 格式
+                    支持 .txt, .md, .doc, .docx, .csv 格式
                   </p>
                 </label>
                 {files && files.length > 0 && (
