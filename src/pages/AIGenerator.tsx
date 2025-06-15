@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +16,7 @@ export default function AIGenerator() {
   const [loading, setLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   // 获取 AI 生成历史
   const { data: aiGenerations, refetch } = useQuery({
@@ -61,16 +61,19 @@ export default function AIGenerator() {
       if (error) throw error;
 
       if (result.success) {
-        if (data.generationType === "image" && result.imageBase64) {
+        if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
           setGeneratedContent(""); // 清空文本
-          setGeneratedImageBase64(result.imageBase64);
+          setGeneratedImageBase64(result.imageBase64 ?? null);
+          setGeneratedImageUrl(result.imageUrl ?? null);
         } else if (typeof result.content === "string" && result.content.trim()) {
           setGeneratedContent(result.content);
           setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
         } else {
           // 文本内容为空或未返回，清空
           setGeneratedContent("");
           setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
         }
 
         // 保存到数据库时也一并存模型信息
@@ -108,10 +111,10 @@ export default function AIGenerator() {
   const handleSaveAsResource = async () => {
     // Debug: 打印待保存内容和设置的 content 字段
     console.log("即将保存的内容：", {
-      title, description, generatedContent, generatedImageBase64
+      title, description, generatedContent, generatedImageBase64, generatedImageUrl
     });
 
-    if (!(generatedContent || generatedImageBase64) || !title.trim()) {
+    if (!(generatedContent || generatedImageBase64 || generatedImageUrl) || !title.trim()) {
       toast({ title: "请填写标题并生成内容", variant: "destructive" });
       return;
     }
@@ -119,8 +122,7 @@ export default function AIGenerator() {
     let type: "document" | "image" | "courseware" = "courseware";
     let file_type = undefined;
 
-    if (generatedImageBase64) {
-      // 图片 AI 生成
+    if (generatedImageBase64 || generatedImageUrl) {
       type = "image";
       file_type = "image/png";
     } else if (generatedContent) {
@@ -151,7 +153,7 @@ export default function AIGenerator() {
           type: type,
           status: 'draft',
           owner_id: profile?.id,
-          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : undefined,
+          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : generatedImageUrl ? generatedImageUrl : undefined,
           file_type: file_type,
         });
       if (error) throw error;
@@ -193,6 +195,7 @@ export default function AIGenerator() {
             <GeneratedContentDisplay
               generatedContent={generatedContent}
               generatedImageBase64={generatedImageBase64}
+              generatedImageUrl={generatedImageUrl}
               title={title}
               description={description}
               onTitleChange={setTitle}

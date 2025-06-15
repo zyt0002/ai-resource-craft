@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 interface GeneratedContentDisplayProps {
   generatedContent: string;
   generatedImageBase64: string | null;
+  generatedImageUrl?: string | null; // 新增，可选
   title: string;
   description: string;
   onTitleChange: (title: string) => void;
@@ -25,20 +26,26 @@ function isMarkdown(title: string, content: string) {
 export function GeneratedContentDisplay({
   generatedContent,
   generatedImageBase64,
+  generatedImageUrl,
   title,
   description,
   onTitleChange,
   onDescriptionChange,
   onSaveAsResource,
 }: GeneratedContentDisplayProps) {
-  // 【修复点1】只要有 generatedImageBase64，始终只渲染图片路径，无论 title
-  if (generatedImageBase64) {
+  // 只要有图片（base64或url），优先渲染图片，不再只判断generatedImageBase64
+  if (generatedImageBase64 || generatedImageUrl) {
     return (
       <div className="space-y-4">
         <div>
           <Label>生成图片</Label>
           <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
-            <img src={generatedImageBase64} alt="AI生成图片" className="max-w-full max-h-64 rounded" />
+            <img
+              src={generatedImageBase64 || generatedImageUrl || ""}
+              alt="AI生成图片"
+              className="max-w-full max-h-64 rounded"
+              draggable={false}
+            />
           </div>
         </div>
         <div className="space-y-2">
@@ -66,7 +73,6 @@ export function GeneratedContentDisplay({
     );
   }
 
-  // 【纯文本内容渲染】
   if (generatedContent) {
     const renderAsMarkdown = isMarkdown(title, generatedContent);
 
