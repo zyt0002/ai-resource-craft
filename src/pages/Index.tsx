@@ -124,7 +124,7 @@ export default function Index() {
 
       {/* 快速操作 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl">
-        <Card className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <Sparkles className="w-12 h-12" />
@@ -139,7 +139,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <FolderKanban className="w-12 h-12" />
@@ -154,7 +154,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <Database className="w-12 h-12" />
