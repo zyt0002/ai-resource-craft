@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { ResourceCard } from "@/components/ResourceCard";
 import StatsCard from "@/components/StatsCard";
 import SearchAndFilter from "@/components/SearchAndFilter";
-import { Sparkles, FolderKanban, FileText, Image, Users, TrendingUp } from "lucide-react";
+import { Sparkles, FolderKanban, FileText, Image, Users, TrendingUp, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
@@ -122,7 +123,7 @@ export default function Index() {
       </div>
 
       {/* 快速操作 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl">
         <Card className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
@@ -147,6 +148,21 @@ export default function Index() {
                 <p className="text-green-100 mb-4">管理所有教学资源，支持分类和搜索</p>
                 <Button variant="secondary" asChild>
                   <a href="/resources">管理资源</a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:shadow-lg transition-shadow">
+          <CardContent className="p-0">
+            <div className="flex items-center gap-4">
+              <Database className="w-12 h-12" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold mb-2">知识库</h3>
+                <p className="text-purple-100 mb-4">智能检索和RAG问答，构建教学知识体系</p>
+                <Button variant="secondary" asChild>
+                  <a href="/knowledge-base">进入知识库</a>
                 </Button>
               </div>
             </div>
@@ -224,7 +240,7 @@ export default function Index() {
           </div>
         ) : (
           <div className="col-span-full text-center py-10 text-gray-400">
-            暂无资源，去“资源管理”上传您的第一个资源吧。
+            暂无资源，去"资源管理"上传您的第一个资源吧。
           </div>
         )}
       </div>
