@@ -34,7 +34,7 @@ export function ArticleEditDialog({ article, open, onOpenChange, onSuccess }: Ar
     title: "",
     content: "",
     summary: "",
-    category: "",
+    category: "none",
     tags: "",
     status: "active",
   });
@@ -42,18 +42,19 @@ export function ArticleEditDialog({ article, open, onOpenChange, onSuccess }: Ar
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (article) {
+    if (article && open) {
+      console.log('Setting form data for article:', article);
       setFormData({
         title: article.title || "",
         content: article.content || "",
         summary: article.summary || "",
-        category: article.category || "",
+        category: article.category || "none",
         tags: "",
         status: article.status || "active",
       });
       setTagList(article.tags || []);
     }
-  }, [article]);
+  }, [article, open]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -88,27 +89,38 @@ export function ArticleEditDialog({ article, open, onOpenChange, onSuccess }: Ar
       return;
     }
 
+    if (!article?.id) {
+      toast({ title: "文章ID不存在", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
+      const updateData = {
+        title: formData.title,
+        content: formData.content,
+        summary: formData.summary,
+        category: formData.category === "none" ? null : formData.category,
+        tags: tagList.length > 0 ? tagList : null,
+        status: formData.status,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('Updating article with data:', updateData);
+
       const { error } = await supabase
         .from('knowledge_base_articles')
-        .update({
-          title: formData.title,
-          content: formData.content,
-          summary: formData.summary,
-          category: formData.category || null,
-          tags: tagList.length > 0 ? tagList : null,
-          status: formData.status,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', article.id);
 
       if (error) throw error;
 
       toast({ title: "文章更新成功" });
       onSuccess();
+      onOpenChange(false);
     } catch (error: any) {
+      console.error('Update error:', error);
       toast({
         title: "更新失败",
         description: error.message,
@@ -118,6 +130,10 @@ export function ArticleEditDialog({ article, open, onOpenChange, onSuccess }: Ar
       setIsLoading(false);
     }
   };
+
+  if (!article) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,7 +161,7 @@ export function ArticleEditDialog({ article, open, onOpenChange, onSuccess }: Ar
                   <SelectValue placeholder="选择分类" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">无分类</SelectItem>
+                  <SelectItem value="none">无分类</SelectItem>
                   <SelectItem value="技术文档">技术文档</SelectItem>
                   <SelectItem value="产品说明">产品说明</SelectItem>
                   <SelectItem value="用户手册">用户手册</SelectItem>
