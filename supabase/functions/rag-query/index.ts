@@ -30,6 +30,8 @@ serve(async (req) => {
       throw new Error('Query is required')
     }
 
+    console.log('收到RAG查询:', query)
+
     // 创建Supabase客户端
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -48,10 +50,12 @@ serve(async (req) => {
       .limit(10)
 
     if (searchError) {
+      console.error('搜索错误:', searchError)
       throw new Error(`Search error: ${searchError.message}`)
     }
 
     if (!searchResults || searchResults.length === 0) {
+      console.log('未找到相关文档')
       return new Response(
         JSON.stringify({
           answer: '抱歉，我在知识库中没有找到相关信息来回答您的问题。',
@@ -63,40 +67,46 @@ serve(async (req) => {
       )
     }
 
+    console.log(`找到 ${searchResults.length} 个相关文档`)
+
     // 2. 获取查询向量（使用BAAI/bge-m3模型）
-    const queryEmbeddingResponse = await fetch(BGE_M3_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('SILICONFLOW_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'BAAI/bge-m3',
-        input: query,
-        encoding_format: 'float',
-      }),
-    })
-
-    if (!queryEmbeddingResponse.ok) {
-      console.warn('Vector embedding failed, using text search results only')
-    }
-
     let queryEmbedding = null
     try {
-      const embeddingData = await queryEmbeddingResponse.json()
-      queryEmbedding = embeddingData.data[0].embedding
+      const queryEmbeddingResponse = await fetch(BGE_M3_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SILICONFLOW_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'BAAI/bge-m3',
+          input: query,
+          encoding_format: 'float',
+        }),
+      })
+
+      if (queryEmbeddingResponse.ok) {
+        const embeddingData = await queryEmbeddingResponse.json()
+        queryEmbedding = embeddingData.data[0].embedding
+        console.log('成功获取查询向量')
+      } else {
+        console.warn('向量嵌入失败，使用文本搜索结果')
+      }
     } catch (e) {
-      console.warn('Failed to parse embedding response:', e)
+      console.warn('向量嵌入请求失败:', e)
     }
 
     // 3. 计算相似度（如果有向量）并排序
     let rankedResults = searchResults
     
     if (queryEmbedding) {
-      // 为每个文档计算向量（这里简化处理，实际应该预先计算并存储）
+      // 为每个文档计算向量并计算相似度
       const documentsWithScores = await Promise.all(
         searchResults.map(async (doc: DatabaseRecord) => {
           try {
+            // 限制内容长度以避免API限制
+            const contentForEmbedding = doc.content.substring(0, 1500)
+            
             const docEmbeddingResponse = await fetch(BGE_M3_API_URL, {
               method: 'POST',
               headers: {
@@ -105,7 +115,7 @@ serve(async (req) => {
               },
               body: JSON.stringify({
                 model: 'BAAI/bge-m3',
-                input: doc.content.substring(0, 2000), // 限制长度
+                input: contentForEmbedding,
                 encoding_format: 'float',
               }),
             })
@@ -119,7 +129,7 @@ serve(async (req) => {
               return { ...doc, relevanceScore: similarity }
             }
           } catch (e) {
-            console.warn('Failed to get embedding for document:', doc.id, e)
+            console.warn('获取文档向量失败:', doc.id, e)
           }
           
           return { ...doc, relevanceScore: 0.5 } // 默认分数
@@ -137,20 +147,22 @@ serve(async (req) => {
       }))
     }
 
+    console.log('排序后的结果数量:', rankedResults.length)
+
     // 4. 构建上下文
     const context = rankedResults
-      .map(doc => `标题: ${doc.title}\n内容: ${doc.content}`)
+      .map(doc => `标题: ${doc.title}\n内容: ${doc.content.substring(0, 1000)}`)
       .join('\n\n---\n\n')
 
-    // 5. 调用OpenAI生成答案
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // 5. 调用硅基流动生成答案
+    const siliconFlowResponse = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${Deno.env.get('SILICONFLOW_API_KEY')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'Qwen/Qwen2.5-7B-Instruct',
         messages: [
           {
             role: 'system',
@@ -161,6 +173,7 @@ serve(async (req) => {
 2. 如果上下文中没有相关信息，请明确说明
 3. 回答要准确、简洁、有帮助
 4. 可以适当引用具体的文档标题
+5. 使用中文回答
 
 上下文信息：
 ${context}`
@@ -175,12 +188,16 @@ ${context}`
       }),
     })
 
-    if (!openaiResponse.ok) {
-      throw new Error('OpenAI API request failed')
+    if (!siliconFlowResponse.ok) {
+      const errorText = await siliconFlowResponse.text()
+      console.error('硅基流动API请求失败:', errorText)
+      throw new Error('硅基流动API请求失败')
     }
 
-    const openaiData = await openaiResponse.json()
-    const answer = openaiData.choices[0].message.content
+    const siliconFlowData = await siliconFlowResponse.json()
+    const answer = siliconFlowData.choices[0].message.content
+
+    console.log('生成答案成功')
 
     // 6. 准备返回的来源信息
     const sources = rankedResults.map(doc => ({
@@ -199,9 +216,13 @@ ${context}`
       },
     )
   } catch (error) {
-    console.error('RAG query error:', error)
+    console.error('RAG查询错误:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        answer: '抱歉，系统暂时无法处理您的请求，请稍后再试。',
+        sources: []
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
