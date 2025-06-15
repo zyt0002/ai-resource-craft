@@ -232,30 +232,107 @@ serve(async (req) => {
       });
     }
 
-    // ======================= 视频生成功能 ======================
+    // ======================= 视频生成功能（新版API） ======================
     if (generationType === "video-generation") {
-      console.log(`[AI-Generate] 使用视频生成功能，模型: ${model}`);
-      
-      // 目前先使用文本生成模拟视频生成，返回视频URL
-      // 在实际应用中，这里应该调用真正的视频生成API
-      const videoModel = model === "FunAudioLLM/SenseVoiceSmall" ? model : "FunAudioLLM/SenseVoiceSmall";
-      
-      // 临时返回一个示例视频URL，实际应用中需要调用真正的视频生成API
-      const mockVideoUrl = "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4";
-      
-      console.log('视频生成完成，返回URL:', mockVideoUrl);
-      
-      return new Response(JSON.stringify({
-        success: true,
+      console.log(`[AI-Generate] 使用新版视频生成功能，模型: ${model}`);
+      // 只支持Wan-AI/Wan2.1-T2V-14B
+      const videoModel = "Wan-AI/Wan2.1-T2V-14B";
+      // 允许 prompt/image/image_size/seed/negative_prompt，用户未传则用默认
+      const postBody: Record<string, any> = {
         model: videoModel,
-        generationType,
-        videoUrl: mockVideoUrl,
-        content: "",
-        fileProcessed: false,
-        multimodalUsed: false
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        prompt,
+        image_size: "1280x720",
+      };
+      // 补充可选项
+      if (req.prompt?.negative_prompt) postBody.negative_prompt = req.prompt.negative_prompt;
+      if (fileUrl) postBody.image = fileUrl;
+      if (req.prompt?.seed) postBody.seed = req.prompt.seed;
+
+      // Step 1: 提交生成任务
+      const submitResp = await fetch("https://api.siliconflow.cn/v1/video/submit", {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postBody),
       });
+
+      if (!submitResp.ok) {
+        const text = await submitResp.text();
+        throw new Error(`视频生成请求失败: ${submitResp.status} ${text}`);
+      }
+      const submitData = await submitResp.json();
+      const requestId = submitData.requestId;
+      if (!requestId) {
+        console.error("API未返回requestId:", submitData);
+        throw new Error("视频生成API调用失败（未获取到requestId）");
+      }
+      console.log('已提交视频生成请求，requestId:', requestId);
+
+      // Step 2: 轮询取视频链接（最多尝试60秒）
+      let videoUrl: string | null = null;
+      let attempts = 0;
+      const maxAttempts = 12;
+      const pollDelay = 5000;
+      let statusDetail: string = "";
+
+      while (attempts < maxAttempts && !videoUrl) {
+        attempts++;
+        await new Promise(res => setTimeout(res, pollDelay));
+        console.log(`[Poll] 查询视频状态, attempt ${attempts}/${maxAttempts}`);
+        const statusResp = await fetch("https://api.siliconflow.cn/v1/video/status", {
+          method: "POST",
+          headers: {
+            'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ requestId })
+        });
+        if (!statusResp.ok) {
+          statusDetail = await statusResp.text();
+          console.warn(`[Poll] 视频状态查询失败: ${statusResp.status}`);
+          continue;
+        }
+        const statData = await statusResp.json();
+        if (statData.status === "success" && statData.videoUrl) {
+          videoUrl = statData.videoUrl;
+          break;
+        } else if (statData.status === "failed") {
+          statusDetail = statData.message || "生成失败";
+          break;
+        } else {
+          statusDetail = statData.status || "";
+          // 继续下一次轮询
+        }
+      }
+
+      if (videoUrl) {
+        console.log('视频生成成功，URL:', videoUrl);
+        return new Response(JSON.stringify({
+          success: true,
+          model: videoModel,
+          generationType,
+          videoUrl,
+          content: "",
+          fileProcessed: !!fileUrl,
+          multimodalUsed: false,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        const errMsg = statusDetail
+          ? `视频生成超时或失败，最后状态：${statusDetail}`
+          : "视频生成超时，未拿到视频地址";
+        return new Response(JSON.stringify({
+          success: false,
+          error: errMsg,
+          requestId,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // =============== 文本生成逻辑 ================
