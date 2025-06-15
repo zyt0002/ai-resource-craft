@@ -5,13 +5,11 @@ import { Sparkles } from "lucide-react";
 import { AIGeneratorForm } from "@/components/AIGeneratorForm";
 import { GeneratedContentDisplay } from "@/components/GeneratedContentDisplay";
 import { useAIGeneration } from "@/hooks/useAIGeneration";
-import VoiceToTextPanel from "./VoiceToTextPanel";
 
 export function AIGeneratorMain() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [showVoiceToText, setShowVoiceToText] = useState(false);
-
+  
   const {
     loading,
     generatedContent,
@@ -38,35 +36,22 @@ export function AIGeneratorMain() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <CardTitle>生成结果</CardTitle>
-            <button
-              className="text-sm px-2 py-1 rounded text-primary border border-primary hover:bg-primary/10 ml-2 transition"
-              onClick={() => setShowVoiceToText(v => !v)}
-              type="button"
-            >
-              {showVoiceToText ? "返回生成内容" : "语音转文字"}
-            </button>
-          </div>
+        <CardHeader>
+          <CardTitle>生成结果</CardTitle>
         </CardHeader>
         <CardContent>
-          {showVoiceToText ? (
-            <VoiceToTextPanel />
-          ) : (
-            <GeneratedContentDisplay
-              generatedContent={generatedContent}
-              generatedImageBase64={generatedImageBase64}
-              generatedImageUrl={generatedImageUrl}
-              generatedVideoUrl={generatedVideoUrl}
-              generatedAudioBase64={generatedAudioBase64}
-              title={title}
-              description={description}
-              onTitleChange={setTitle}
-              onDescriptionChange={setDescription}
-              onSaveAsResource={handleSaveAsResource}
-            />
-          )}
+          <GeneratedContentDisplay
+            generatedContent={generatedContent}
+            generatedImageBase64={generatedImageBase64}
+            generatedImageUrl={generatedImageUrl}
+            generatedVideoUrl={generatedVideoUrl}
+            generatedAudioBase64={generatedAudioBase64}
+            title={title}
+            description={description}
+            onTitleChange={setTitle}
+            onDescriptionChange={setDescription}
+            onSaveAsResource={handleSaveAsResource}
+          />
         </CardContent>
       </Card>
     </div>
