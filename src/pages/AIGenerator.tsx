@@ -17,6 +17,7 @@ export default function AIGenerator() {
   const [generatedContent, setGeneratedContent] = useState("");
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
 
   // 获取 AI 生成历史
   const { data: aiGenerations, refetch } = useQuery({
@@ -60,23 +61,31 @@ export default function AIGenerator() {
       if (error) throw error;
 
       if (result.success) {
-        // 新增: 兼容视频生成（未来可根据API扩展渲染结果形式）
+        // 处理图片生成
         if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
           setGeneratedContent(""); // 清空文本
           setGeneratedImageBase64(result.imageBase64 ?? null);
           setGeneratedImageUrl(result.imageUrl ?? null);
-        } else if (data.generationType === "video-generation" && result.content) {
+          setGeneratedVideoUrl(null);
+        } 
+        // 处理视频生成
+        else if (data.generationType === "video-generation" && result.videoUrl) {
+          setGeneratedContent("");
+          setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
+          setGeneratedVideoUrl(result.videoUrl);
+        }
+        // 处理文本内容生成
+        else if (typeof result.content === "string" && result.content.trim()) {
           setGeneratedContent(result.content);
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
-        } else if (typeof result.content === "string" && result.content.trim()) {
-          setGeneratedContent(result.content);
-          setGeneratedImageBase64(null);
-          setGeneratedImageUrl(null);
+          setGeneratedVideoUrl(null);
         } else {
           setGeneratedContent("");
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
+          setGeneratedVideoUrl(null);
         }
 
         // 保存到数据库的类型及信息可根据业务再具体细化
@@ -114,18 +123,21 @@ export default function AIGenerator() {
   const handleSaveAsResource = async () => {
     // Debug: 打印待保存内容和设置的 content 字段
     console.log("即将保存的内容：", {
-      title, description, generatedContent, generatedImageBase64, generatedImageUrl
+      title, description, generatedContent, generatedImageBase64, generatedImageUrl, generatedVideoUrl
     });
 
-    if (!(generatedContent || generatedImageBase64 || generatedImageUrl) || !title.trim()) {
+    if (!(generatedContent || generatedImageBase64 || generatedImageUrl || generatedVideoUrl) || !title.trim()) {
       toast({ title: "请填写标题并生成内容", variant: "destructive" });
       return;
     }
 
-    let type: "document" | "image" | "courseware" = "courseware";
+    let type: "document" | "image" | "courseware" | "video" = "courseware";
     let file_type = undefined;
 
-    if (generatedImageBase64 || generatedImageUrl) {
+    if (generatedVideoUrl) {
+      type = "video";
+      file_type = "video/mp4";
+    } else if (generatedImageBase64 || generatedImageUrl) {
       type = "image";
       file_type = "image/png";
     } else if (generatedContent) {
@@ -156,7 +168,7 @@ export default function AIGenerator() {
           type: type,
           status: 'draft',
           owner_id: profile?.id,
-          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : generatedImageUrl ? generatedImageUrl : undefined,
+          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : generatedImageUrl ? generatedImageUrl : generatedVideoUrl ? generatedVideoUrl : undefined,
           file_type: file_type,
         });
       if (error) throw error;
@@ -197,6 +209,7 @@ export default function AIGenerator() {
               generatedContent={generatedContent}
               generatedImageBase64={generatedImageBase64}
               generatedImageUrl={generatedImageUrl}
+              generatedVideoUrl={generatedVideoUrl}
               title={title}
               description={description}
               onTitleChange={setTitle}

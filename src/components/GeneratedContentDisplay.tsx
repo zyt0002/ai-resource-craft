@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +7,8 @@ import remarkGfm from "remark-gfm";
 interface GeneratedContentDisplayProps {
   generatedContent: string;
   generatedImageBase64: string | null;
-  generatedImageUrl?: string | null; // 新增，可选
+  generatedImageUrl?: string | null;
+  generatedVideoUrl?: string | null;
   title: string;
   description: string;
   onTitleChange: (title: string) => void;
@@ -27,12 +27,55 @@ export function GeneratedContentDisplay({
   generatedContent,
   generatedImageBase64,
   generatedImageUrl,
+  generatedVideoUrl,
   title,
   description,
   onTitleChange,
   onDescriptionChange,
   onSaveAsResource,
 }: GeneratedContentDisplayProps) {
+  // 视频生成结果渲染
+  if (generatedVideoUrl) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label>生成视频</Label>
+          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
+            <video
+              src={generatedVideoUrl}
+              controls
+              className="max-w-full max-h-64 rounded"
+              preload="metadata"
+            >
+              您的浏览器不支持视频播放。
+            </video>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="title">资源标题</Label>
+          <Input
+            id="title"
+            placeholder="为生成的视频起个标题"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">资源描述</Label>
+          <Input
+            id="description"
+            placeholder="简单描述这个视频资源"
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+          />
+        </div>
+        <Button onClick={onSaveAsResource} className="w-full">
+          保存为资源
+        </Button>
+      </div>
+    );
+  }
+
   // 只要有图片（base64或url），优先渲染图片，不再只判断generatedImageBase64
   if (generatedImageBase64 || generatedImageUrl) {
     return (
