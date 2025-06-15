@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { ResourceCard } from "@/components/ResourceCard";
 import StatsCard from "@/components/StatsCard";
@@ -13,6 +12,7 @@ import ResourcePreviewDialog from "@/components/ResourcePreviewDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState as useReactState } from "react";
+import { Link } from "react-router-dom";
 
 const fakeResources = [
   { id: "1", title: "小学语文PPT范例", type: "document", updatedAt: "2024-06-12", category: "语文" },
@@ -132,7 +132,7 @@ export default function Index() {
                 <h3 className="text-xl font-bold mb-2">AI智能生成</h3>
                 <p className="text-blue-100 mb-4">一键生成PPT、图片、教案等教学资源</p>
                 <Button variant="secondary" asChild>
-                  <a href="/ai-generator">开始生成</a>
+                  <Link to="/ai-generator">开始生成</Link>
                 </Button>
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function Index() {
                 <h3 className="text-xl font-bold mb-2">资源管理</h3>
                 <p className="text-green-100 mb-4">管理所有教学资源，支持分类和搜索</p>
                 <Button variant="secondary" asChild>
-                  <a href="/resources">管理资源</a>
+                  <Link to="/resources">管理资源</Link>
                 </Button>
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function Index() {
                 <h3 className="text-xl font-bold mb-2">知识库</h3>
                 <p className="text-purple-100 mb-4">智能检索和RAG问答，构建教学知识体系</p>
                 <Button variant="secondary" asChild>
-                  <a href="/knowledge-base">进入知识库</a>
+                  <Link to="/knowledge-base">进入知识库</Link>
                 </Button>
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function Index() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">最近更新的教学资源</h2>
           <Button variant="outline" asChild>
-            <a href="/resources">查看全部</a>
+            <Link to="/resources">查看全部</Link>
           </Button>
         </div>
         <div className="mb-6">
