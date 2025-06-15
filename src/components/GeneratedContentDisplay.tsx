@@ -18,7 +18,6 @@ interface GeneratedContentDisplayProps {
 // 检测内容是否为 Markdown，根据标题后缀或内容特征
 function isMarkdown(title: string, content: string) {
   if (/\.md$/i.test(title)) return true;
-  // 简单猜测判断，也可精细化
   if (content && (/^# /.test(content.trim()) || /[*_`~-]/.test(content))) return true;
   return false;
 }
@@ -32,6 +31,7 @@ export function GeneratedContentDisplay({
   onDescriptionChange,
   onSaveAsResource,
 }: GeneratedContentDisplayProps) {
+  // 【修复点1】只要有 generatedImageBase64，始终只渲染图片路径，无论 title
   if (generatedImageBase64) {
     return (
       <div className="space-y-4">
@@ -66,6 +66,7 @@ export function GeneratedContentDisplay({
     );
   }
 
+  // 【纯文本内容渲染】
   if (generatedContent) {
     const renderAsMarkdown = isMarkdown(title, generatedContent);
 
