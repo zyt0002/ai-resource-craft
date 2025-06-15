@@ -52,10 +52,10 @@ export function GeneratedContentDisplay({
     console.log("渲染音频组件");
     const audioUrl = `data:audio/mp3;base64,${generatedAudioBase64}`;
     return (
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-4 h-full flex flex-col">
+        <div className="flex-1">
           <Label>生成语音</Label>
-          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
+          <div className="flex justify-center items-center p-6 bg-gray-50 rounded-lg mt-2">
             <audio
               src={audioUrl}
               controls
@@ -75,27 +75,29 @@ export function GeneratedContentDisplay({
             </audio>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="title">资源标题</Label>
-          <Input
-            id="title"
-            placeholder="为生成的语音起个标题"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="title">资源标题</Label>
+            <Input
+              id="title"
+              placeholder="为生成的语音起个标题"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">资源描述</Label>
+            <Input
+              id="description"
+              placeholder="简单描述这个语音资源"
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+            />
+          </div>
+          <Button onClick={onSaveAsResource} className="w-full">
+            保存为资源
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">资源描述</Label>
-          <Input
-            id="description"
-            placeholder="简单描述这个语音资源"
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-          />
-        </div>
-        <Button onClick={onSaveAsResource} className="w-full">
-          保存为资源
-        </Button>
       </div>
     );
   }
@@ -104,14 +106,14 @@ export function GeneratedContentDisplay({
   if (generatedVideoUrl) {
     console.log("渲染视频组件，URL:", generatedVideoUrl);
     return (
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-4 h-full flex flex-col">
+        <div className="flex-1">
           <Label>生成视频</Label>
-          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
+          <div className="flex justify-center items-center p-6 bg-gray-50 rounded-lg mt-2">
             <video
               src={generatedVideoUrl}
               controls
-              className="max-w-full max-h-64 rounded"
+              className="max-w-full max-h-80 rounded"
               preload="metadata"
               onError={(e) => {
                 console.error("视频加载失败:", e);
@@ -128,27 +130,29 @@ export function GeneratedContentDisplay({
             </video>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="title">资源标题</Label>
-          <Input
-            id="title"
-            placeholder="为生成的视频起个标题"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="title">资源标题</Label>
+            <Input
+              id="title"
+              placeholder="为生成的视频起个标题"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">资源描述</Label>
+            <Input
+              id="description"
+              placeholder="简单描述这个视频资源"
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+            />
+          </div>
+          <Button onClick={onSaveAsResource} className="w-full">
+            保存为资源
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">资源描述</Label>
-          <Input
-            id="description"
-            placeholder="简单描述这个视频资源"
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-          />
-        </div>
-        <Button onClick={onSaveAsResource} className="w-full">
-          保存为资源
-        </Button>
       </div>
     );
   }
@@ -156,39 +160,41 @@ export function GeneratedContentDisplay({
   // 只要有图片（base64或url），优先渲染图片，不再只判断generatedImageBase64
   if (generatedImageBase64 || generatedImageUrl) {
     return (
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-4 h-full flex flex-col">
+        <div className="flex-1">
           <Label>生成图片</Label>
-          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
+          <div className="flex justify-center items-center p-6 bg-gray-50 rounded-lg mt-2">
             <img
               src={generatedImageBase64 || generatedImageUrl || ""}
               alt="AI生成图片"
-              className="max-w-full max-h-64 rounded"
+              className="max-w-full max-h-80 rounded"
               draggable={false}
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="title">资源标题</Label>
-          <Input
-            id="title"
-            placeholder="为生成的内容起个标题"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="title">资源标题</Label>
+            <Input
+              id="title"
+              placeholder="为生成的内容起个标题"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">资源描述</Label>
+            <Input
+              id="description"
+              placeholder="简单描述这个资源"
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+            />
+          </div>
+          <Button onClick={onSaveAsResource} className="w-full">
+            保存为资源
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">资源描述</Label>
-          <Input
-            id="description"
-            placeholder="简单描述这个资源"
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-          />
-        </div>
-        <Button onClick={onSaveAsResource} className="w-full">
-          保存为资源
-        </Button>
       </div>
     );
   }
@@ -197,28 +203,30 @@ export function GeneratedContentDisplay({
     const renderAsMarkdown = isMarkdown(title, generatedContent);
 
     return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">资源标题</Label>
-          <Input
-            id="title"
-            placeholder="为生成的内容起个标题"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
+      <div className="space-y-4 h-full flex flex-col">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="title">资源标题</Label>
+            <Input
+              id="title"
+              placeholder="为生成的内容起个标题"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">资源描述</Label>
+            <Input
+              id="description"
+              placeholder="简单描述这个资源"
+              value={description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">资源描述</Label>
-          <Input
-            id="description"
-            placeholder="简单描述这个资源"
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1 flex flex-col">
           <Label>生成内容</Label>
-          <div className="bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto text-sm prose prose-neutral prose-p:my-1">
+          <div className="bg-gray-50 p-4 rounded-lg flex-1 overflow-y-auto text-sm prose prose-neutral prose-p:my-1 max-w-none">
             {renderAsMarkdown ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedContent}</ReactMarkdown>
             ) : (
@@ -234,8 +242,10 @@ export function GeneratedContentDisplay({
   }
 
   return (
-    <div className="text-center text-gray-500 py-8">
-      请在左侧输入提示并点击生成
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center text-gray-500 py-8">
+        请在左侧输入提示并点击生成
+      </div>
     </div>
   );
 }
