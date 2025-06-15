@@ -24,12 +24,19 @@ serve(async (req) => {
     // 解析 multipart/form-data
     const contentType = req.headers.get("content-type") || "";
     const boundary = getBoundary(contentType);
-    if (!boundary) throw new Error("No multipart boundary found.");
+    if (!boundary) {
+      console.error("[Voice2Text] No multipart boundary found");
+      return new Response(JSON.stringify({ error: "No multipart boundary found." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const formData = await req.formData();
     const audioFile = formData.get("file") as File | null;
 
     if (!audioFile) {
+      console.error("[Voice2Text] Missing file");
       return new Response(JSON.stringify({ error: "Missing file" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -51,12 +58,27 @@ serve(async (req) => {
       body: sfForm,
     });
 
-    const sfOut = await sfRes.json();
+    // 检查返回内容是否为 JSON，若不是则直接报错，避免前端报 Unexpected end of JSON input
+    let sfOut;
+    let contentTypeRes = sfRes.headers.get("content-type") || "";
+    try {
+      if (contentTypeRes.includes("application/json")) {
+        sfOut = await sfRes.json();
+      } else {
+        const textOut = await sfRes.text();
+        console.error("[Voice2Text] Downstream not JSON:", textOut);
+        sfOut = { error: "下游 API 响应格式异常", detail: textOut };
+      }
+    } catch (err) {
+      console.error("[Voice2Text] Error while parsing downstream response:", err);
+      sfOut = { error: "下游 API JSON 解析失败" };
+    }
 
     if (!sfRes.ok) {
       console.error("[Voice2Text] API Error:", sfOut);
       return new Response(JSON.stringify({
         error: sfOut?.error || "识别失败",
+        detail: sfOut?.detail,
       }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

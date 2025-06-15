@@ -37,6 +37,14 @@ export default function VoiceToTextPanel() {
         body: formData,
       });
 
+      // 新增：先判断 content-type 是否为 json
+      const respContentType = res.headers.get("content-type") || "";
+      if (!respContentType.includes("application/json")) {
+        const text = await res.text();
+        setErrorMsg(`服务响应异常（不是JSON）：${text}`);
+        return;
+      }
+
       const result = await res.json();
       if (res.ok && result.text) {
         setResultText(result.text);
