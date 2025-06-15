@@ -234,8 +234,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
--        model: 'Qwen/Qwen2.5-7B-Instruct',
-+        model: 'Qwen/Qwen2.5-32B-Instruct',
+        model: 'Qwen/Qwen2.5-7B-Instruct',
         messages: [
           {
             role: 'system',
