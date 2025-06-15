@@ -17,17 +17,26 @@ serve(async (req) => {
     const { prompt, generationType, model, fileUrl } = await req.json();
     console.log('收到请求:', { prompt, generationType, model, fileUrl });
     
-    if (!SILICONFLOW_API_KEY) throw new Error('硅基流动 API 密钥未配置');
+    if (!SILICONFLOW_API_KEY) {
+      console.error('硅基流动 API 密钥未配置');
+      throw new Error('硅基流动 API 密钥未配置');
+    }
+
+    console.log('API密钥状态:', SILICONFLOW_API_KEY ? '已配置' : '未配置');
+    console.log('API密钥前缀:', SILICONFLOW_API_KEY ? SILICONFLOW_API_KEY.substring(0, 10) + '...' : 'N/A');
 
     // 根据生成类型路由到不同的处理器
     switch (generationType) {
       case "image":
+        console.log('路由到图像生成处理器');
         return await handleImageGeneration(prompt, SILICONFLOW_API_KEY);
       
       case "video-generation":
+        console.log('路由到视频生成处理器');
         return await handleVideoGeneration(prompt, model, fileUrl, SILICONFLOW_API_KEY);
       
       default:
+        console.log('路由到文本生成处理器');
         return await handleTextGeneration(prompt, generationType, model, fileUrl, SILICONFLOW_API_KEY);
     }
   } catch (error) {
