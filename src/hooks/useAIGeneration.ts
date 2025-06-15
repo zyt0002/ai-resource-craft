@@ -17,6 +17,7 @@ export function useAIGeneration(
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [generatedAudioBase64, setGeneratedAudioBase64] = useState<string | null>(null);
 
   // 获取 AI 生成历史
   const { data: aiGenerations, refetch } = useQuery({
@@ -37,6 +38,7 @@ export function useAIGeneration(
     generationType: string;
     model: string;
     fileUrl: string | null;
+    voice?: string;
   }) => {
     if (!data.prompt.trim()) {
       toast({ title: "请输入生成提示", variant: "destructive" });
@@ -51,6 +53,7 @@ export function useAIGeneration(
           generationType: data.generationType,
           model: data.model,
           fileUrl: data.fileUrl,
+          voice: data.voice,
         },
       });
 
@@ -59,13 +62,23 @@ export function useAIGeneration(
       if (error) throw error;
 
       if (result.success) {
+        // 处理音频生成
+        if (data.generationType === "audio" && result.audioBase64) {
+          console.log("处理音频生成结果");
+          setGeneratedContent("");
+          setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
+          setGeneratedVideoUrl(null);
+          setGeneratedAudioBase64(result.audioBase64);
+        }
         // 处理图片生成
-        if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
+        else if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
           console.log("处理图片生成结果");
           setGeneratedContent("");
           setGeneratedImageBase64(result.imageBase64 ?? null);
           setGeneratedImageUrl(result.imageUrl ?? null);
           setGeneratedVideoUrl(null);
+          setGeneratedAudioBase64(null);
         } 
         // 处理视频生成
         else if (data.generationType === "video-generation" && result.videoUrl) {
@@ -74,6 +87,7 @@ export function useAIGeneration(
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
           setGeneratedVideoUrl(result.videoUrl);
+          setGeneratedAudioBase64(null);
         }
         // 处理文本内容生成
         else if (typeof result.content === "string" && result.content.trim()) {
@@ -82,12 +96,14 @@ export function useAIGeneration(
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
           setGeneratedVideoUrl(null);
+          setGeneratedAudioBase64(null);
         } else {
           console.log("未匹配到任何生成类型，清空所有状态");
           setGeneratedContent("");
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
           setGeneratedVideoUrl(null);
+          setGeneratedAudioBase64(null);
         }
 
         // 保存到数据库
@@ -124,18 +140,21 @@ export function useAIGeneration(
 
   const handleSaveAsResource = async () => {
     console.log("即将保存的内容：", {
-      title, description, generatedContent, generatedImageBase64, generatedImageUrl, generatedVideoUrl
+      title, description, generatedContent, generatedImageBase64, generatedImageUrl, generatedVideoUrl, generatedAudioBase64
     });
 
-    if (!(generatedContent || generatedImageBase64 || generatedImageUrl || generatedVideoUrl) || !title.trim()) {
+    if (!(generatedContent || generatedImageBase64 || generatedImageUrl || generatedVideoUrl || generatedAudioBase64) || !title.trim()) {
       toast({ title: "请填写标题并生成内容", variant: "destructive" });
       return;
     }
 
-    let type: "document" | "image" | "courseware" | "video" = "courseware";
+    let type: "document" | "image" | "courseware" | "video" | "audio" = "courseware";
     let file_type = undefined;
 
-    if (generatedVideoUrl) {
+    if (generatedAudioBase64) {
+      type = "audio";
+      file_type = "audio/mp3";
+    } else if (generatedVideoUrl) {
       type = "video";
       file_type = "video/mp4";
     } else if (generatedImageBase64 || generatedImageUrl) {
@@ -169,7 +188,7 @@ export function useAIGeneration(
           type: type,
           status: 'draft',
           owner_id: profile?.id,
-          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : generatedImageUrl ? generatedImageUrl : generatedVideoUrl ? generatedVideoUrl : undefined,
+          thumbnail_url: generatedImageBase64 ? generatedImageBase64 : generatedImageUrl ? generatedImageUrl : generatedVideoUrl ? generatedVideoUrl : generatedAudioBase64 ? `data:audio/mp3;base64,${generatedAudioBase64}` : undefined,
           file_type: file_type,
         });
       if (error) throw error;
@@ -192,6 +211,7 @@ export function useAIGeneration(
     generatedImageBase64,
     generatedImageUrl,
     generatedVideoUrl,
+    generatedAudioBase64,
     aiGenerations,
     handleGenerate,
     handleSaveAsResource

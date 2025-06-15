@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ interface AIGeneratorFormProps {
     generationType: string;
     model: string;
     fileUrl: string | null;
+    voice?: string;
   }) => void;
   loading: boolean;
 }
@@ -20,31 +22,20 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
   const [prompt, setPrompt] = useState("");
   const [generationType, setGenerationType] = useState("courseware");
   const [selectedModel, setSelectedModel] = useState("Qwen/Qwen2.5-7B-Instruct");
+  const [selectedVoice, setSelectedVoice] = useState("FunAudioLLM/CosyVoice2-0.5B:alex");
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
-  // 模型列表：保留FunAudioLLM/SenseVoiceSmall用于视频生成功能
-  const modelList = [
-    { value: "Qwen/Qwen2.5-7B-Instruct", label: "Qwen/Qwen2.5-7B-Instruct" },
-    { value: "Tongyi-Zhiwen/QwenLong-L1-32B", label: "Tongyi-Zhiwen/QwenLong-L1-32B" },
-    { value: "Qwen/Qwen3-32B", label: "Qwen/Qwen3-32B" },
-    { value: "THUDM/GLM-Z1-32B-0414", label: "THUDM/GLM-Z1-32B-0414" },
-    { value: "Qwen/Qwen2.5-VL-32B-Instruct", label: "Qwen/Qwen2.5-VL-32B-Instruct" },
-    { value: "Qwen/QwQ-32B", label: "Qwen/QwQ-32B" },
-    { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B" },
-    { value: "Qwen/Qwen2.5-Coder-32B-Instruct", label: "Qwen/Qwen2.5-Coder-32B-Instruct" },
-    { value: "Qwen/Qwen2.5-32B-Instruct", label: "Qwen/Qwen2.5-32B-Instruct" },
-    { value: "THUDM/GLM-4-32B-0414", label: "THUDM/GLM-4-32B-0414" },
-    { value: "THUDM/GLM-Z1-Rumination-32B-0414", label: "THUDM/GLM-Z1-Rumination-32B-0414" },
-    { value: "Qwen/Qwen3-14B", label: "Qwen/Qwen3-14B" },
-    { value: "Qwen/Qwen2.5-14B-Instruct", label: "Qwen/Qwen2.5-14B-Instruct" },
-    { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" },
-    { value: "FunAudioLLM/SenseVoiceSmall", label: "FunAudioLLM/SenseVoiceSmall" },
-  ];
-
-  // 只保留Kolors 图片模型
-  const imageModelList = [
-    { value: "Kwai-Kolors/Kolors", label: "Kwai-Kolors/Kolors" },
+  // 音色选项
+  const voiceOptions = [
+    { value: "FunAudioLLM/CosyVoice2-0.5B:alex", label: "Alex (男声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:anna", label: "Anna (女声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:bella", label: "Bella (女声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:benjamin", label: "Benjamin (男声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:charles", label: "Charles (男声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:claire", label: "Claire (女声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:david", label: "David (男声)" },
+    { value: "FunAudioLLM/CosyVoice2-0.5B:diana", label: "Diana (女声)" },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,6 +45,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
       generationType,
       model: selectedModel,
       fileUrl: uploadedFileUrl,
+      voice: generationType === "audio" ? selectedVoice : undefined,
     });
   };
 
@@ -91,7 +83,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
             <SelectItem value="document">教学文档</SelectItem>
             <SelectItem value="image">教学图片</SelectItem>
             <SelectItem value="video-generation">视频生成</SelectItem>
-            <SelectItem value="audio">音频脚本</SelectItem>
+            <SelectItem value="audio">语音生成</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -119,6 +111,22 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
               <SelectItem value="FunAudioLLM/SenseVoiceSmall">
                 FunAudioLLM/SenseVoiceSmall
               </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : generationType === "audio" ? (
+        <div className="space-y-2">
+          <Label htmlFor="voice">选择音色</Label>
+          <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择音色" />
+            </SelectTrigger>
+            <SelectContent>
+              {voiceOptions.map((voice) => (
+                <SelectItem key={voice.value} value={voice.value}>
+                  {voice.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -165,7 +173,11 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
         <Label htmlFor="prompt">生成提示</Label>
         <Textarea
           id="prompt"
-          placeholder="请描述您想要生成的内容，例如：生成一份关于植物光合作用的小学科学课件..."
+          placeholder={
+            generationType === "audio" 
+              ? "请输入要转换为语音的文本内容..." 
+              : "请描述您想要生成的内容，例如：生成一份关于植物光合作用的小学科学课件..."
+          }
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={4}

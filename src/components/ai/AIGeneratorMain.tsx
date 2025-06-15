@@ -16,6 +16,7 @@ export function AIGeneratorMain() {
     generatedImageBase64,
     generatedImageUrl,
     generatedVideoUrl,
+    generatedAudioBase64,
     handleGenerate,
     handleSaveAsResource
   } = useAIGeneration(title, description, setTitle, setDescription);
@@ -44,6 +45,7 @@ export function AIGeneratorMain() {
             generatedImageBase64={generatedImageBase64}
             generatedImageUrl={generatedImageUrl}
             generatedVideoUrl={generatedVideoUrl}
+            generatedAudioBase64={generatedAudioBase64}
             title={title}
             description={description}
             onTitleChange={setTitle}

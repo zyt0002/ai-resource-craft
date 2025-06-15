@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { handleImageGeneration } from "./handlers/imageHandler.ts";
 import { handleVideoGeneration } from "./handlers/videoHandler.ts";
 import { handleTextGeneration } from "./handlers/textHandler.ts";
+import { handleAudioGeneration } from "./handlers/audioHandler.ts";
 import { corsHeaders } from "./utils/cors.ts";
 
 const SILICONFLOW_API_KEY = Deno.env.get('SILICONFLOW_API_KEY');
@@ -14,8 +15,8 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, generationType, model, fileUrl } = await req.json();
-    console.log('收到请求:', { prompt, generationType, model, fileUrl });
+    const { prompt, generationType, model, fileUrl, voice } = await req.json();
+    console.log('收到请求:', { prompt, generationType, model, fileUrl, voice });
     
     if (!SILICONFLOW_API_KEY) {
       console.error('硅基流动 API 密钥未配置');
@@ -34,6 +35,10 @@ serve(async (req) => {
       case "video-generation":
         console.log('路由到视频生成处理器');
         return await handleVideoGeneration(prompt, model, fileUrl, SILICONFLOW_API_KEY);
+      
+      case "audio":
+        console.log('路由到音频生成处理器');
+        return await handleAudioGeneration(prompt, voice, SILICONFLOW_API_KEY);
       
       default:
         console.log('路由到文本生成处理器');

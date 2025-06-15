@@ -10,6 +10,7 @@ interface GeneratedContentDisplayProps {
   generatedImageBase64: string | null;
   generatedImageUrl?: string | null;
   generatedVideoUrl?: string | null;
+  generatedAudioBase64?: string | null;
   title: string;
   description: string;
   onTitleChange: (title: string) => void;
@@ -29,6 +30,7 @@ export function GeneratedContentDisplay({
   generatedImageBase64,
   generatedImageUrl,
   generatedVideoUrl,
+  generatedAudioBase64,
   title,
   description,
   onTitleChange,
@@ -41,8 +43,62 @@ export function GeneratedContentDisplay({
     generatedContent: !!generatedContent,
     generatedImageBase64: !!generatedImageBase64,
     generatedImageUrl: !!generatedImageUrl,
-    generatedVideoUrl: generatedVideoUrl
+    generatedVideoUrl: generatedVideoUrl,
+    generatedAudioBase64: !!generatedAudioBase64
   });
+
+  // 音频生成结果渲染
+  if (generatedAudioBase64) {
+    console.log("渲染音频组件");
+    const audioUrl = `data:audio/mp3;base64,${generatedAudioBase64}`;
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label>生成语音</Label>
+          <div className="flex justify-center items-center p-4 bg-gray-50 rounded-lg">
+            <audio
+              src={audioUrl}
+              controls
+              className="w-full max-w-md"
+              preload="metadata"
+              onError={(e) => {
+                console.error("音频加载失败:", e);
+              }}
+              onLoadStart={() => {
+                console.log("开始加载音频");
+              }}
+              onCanPlay={() => {
+                console.log("音频可以播放");
+              }}
+            >
+              您的浏览器不支持音频播放。
+            </audio>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="title">资源标题</Label>
+          <Input
+            id="title"
+            placeholder="为生成的语音起个标题"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="description">资源描述</Label>
+          <Input
+            id="description"
+            placeholder="简单描述这个语音资源"
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+          />
+        </div>
+        <Button onClick={onSaveAsResource} className="w-full">
+          保存为资源
+        </Button>
+      </div>
+    );
+  }
 
   // 视频生成结果渲染
   if (generatedVideoUrl) {
