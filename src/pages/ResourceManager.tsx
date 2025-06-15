@@ -24,13 +24,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
-// 修正这里的 Resource 类型，补充 content 字段并且和数据库类型更一致
+// 明确字段命名，兼容旧字段
 type Resource = {
   id: string;
   title: string;
   type: string;
-  updated_at?: string;
+  updatedAt?: string;
   thumbnail_url?: string;
+  previewUrl?: string;
   file_path?: string;
   file_type?: string;
   content?: string;
@@ -57,7 +58,12 @@ export default function ResourceManager() {
         .eq("owner_id", profile.id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return data;
+      // 转化字段，修正 ResourceCard 类型要求
+      return (data || []).map((res: any) => ({
+        ...res,
+        updatedAt: res.updated_at,
+        previewUrl: res.thumbnail_url || (res.type === "image" ? res.file_path : undefined),
+      }));
     },
     enabled: !!profile?.id,
   });
@@ -118,21 +124,13 @@ export default function ResourceManager() {
                     id: res.id,
                     title: res.title,
                     type: res.type,
-                    updated_at: res.updated_at,
-                    thumbnail_url: res.thumbnail_url,
+                    updatedAt: res.updatedAt,
+                    previewUrl: res.previewUrl,
                     file_path: res.file_path,
                     file_type: res.file_type,
-                    content: res.content,
                   }}
                   onPreview={() => setPreviewResource({
-                    id: res.id,
-                    title: res.title,
-                    type: res.type,
-                    updated_at: res.updated_at,
-                    thumbnail_url: res.thumbnail_url,
-                    file_path: res.file_path,
-                    file_type: res.file_type,
-                    content: res.content,
+                    ...res,
                   })}
                 />
                 {isAdmin && (
