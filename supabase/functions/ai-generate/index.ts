@@ -193,35 +193,37 @@ serve(async (req) => {
 
       const imageResData = await resp.json();
 
+      // 优先返回 base64，如有，其次返回 url
       let imageBase64: string | null = null;
+      let imageUrl: string | null = null;
 
-      // 优先使用 data[0].b64_json
+      // 兼容不同API返回格式
       if (imageResData?.data?.[0]?.b64_json) {
         imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
         console.log('直接获取到 b64_json');
       } else if (imageResData?.data?.[0]?.url) {
-        // 新版 API 形式，下载url转为base64
-        console.log('通过 data[0].url 获取图片');
-        imageBase64 = await fetchImageBase64FromUrl(imageResData.data[0].url);
+        // 若无base64，直接返回图片公网url
+        imageUrl = imageResData.data[0].url;
+        console.log('使用 data[0].url，直接返回图片url');
       } else if (imageResData?.images?.[0]?.url) {
-        // fallback 兼容 images[0].url
-        console.log('只有 images[0].url，尝试直接抓取');
-        imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
+        imageUrl = imageResData.images[0].url;
+        console.log('使用 images[0].url，直接返回图片url');
       } else {
         console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
       }
 
-      if (!imageBase64) {
+      if (!imageBase64 && !imageUrl) {
         throw new Error("图片API未返回有效图片。返回内容: " + JSON.stringify(imageResData));
       }
 
-      console.log('图片生成成功，返回base64长度:', imageBase64.length);
+      console.log('图片生成成功，imageBase64:', !!imageBase64, 'imageUrl:', imageUrl);
 
       return new Response(JSON.stringify({
         success: true,
         model: imageModel,
         generationType,
-        imageBase64: imageBase64,
+        imageBase64: imageBase64, // 保持兼容
+        imageUrl: imageUrl,
         content: "",
         fileProcessed: false,
         multimodalUsed: false
