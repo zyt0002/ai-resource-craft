@@ -257,52 +257,46 @@ serve(async (req) => {
 
       const imageResData = await resp.json();
 
-      // 优先返回 base64，如有，其次返回 url
+      // 优先返回 supabase 公网 url
       let imageBase64: string | null = null;
-      let imageUrl: string | null = null;
-      let savedUrl: string | null = null;
+      let supabaseImageUrl: string | null = null;
 
       // 兼容不同API返回格式
       if (imageResData?.data?.[0]?.b64_json) {
         imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
         console.log('直接获取到 b64_json');
-        // 新增：直接存 supabase，然后拿公网地址
-        savedUrl = await uploadImageToAiImages(imageBase64);
-        if (savedUrl) {
-          imageUrl = savedUrl; // 直接用 supabase 的 url 作为主图片地址
-        } else {
-          imageUrl = null;
+        // 上传 supabase，然后只返回 supabase url
+        supabaseImageUrl = await uploadImageToAiImages(imageBase64);
+        if (!supabaseImageUrl) {
+          throw new Error('图片上传 supabase 失败');
         }
       } else if (imageResData?.data?.[0]?.url) {
-        // 若无base64，直接返回图片公网url（仍需保存一份到 supabase）
-        imageUrl = imageResData.data[0].url;
+        // 若无base64，再下载url->bucket
+        const srcUrl = imageResData.data[0].url;
         console.log('尝试通过url抓取并上传图片');
-        savedUrl = await uploadImageFromUrl(imageUrl);
-        if (savedUrl) {
-          imageUrl = savedUrl;
+        supabaseImageUrl = await uploadImageFromUrl(srcUrl);
+        if (!supabaseImageUrl) {
+          throw new Error("通过url上传supabase失败");
         }
       } else if (imageResData?.images?.[0]?.url) {
-        imageUrl = imageResData.images[0].url;
-        savedUrl = await uploadImageFromUrl(imageUrl);
-        if (savedUrl) {
-          imageUrl = savedUrl;
+        const srcUrl = imageResData.images[0].url;
+        supabaseImageUrl = await uploadImageFromUrl(srcUrl);
+        if (!supabaseImageUrl) {
+          throw new Error("images.url上传supabase失败");
         }
       } else {
-        console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
+        throw new Error("图片API未返回有效图片。");
       }
 
-      if (!imageBase64 && !imageUrl) {
-        throw new Error("图片API未返回有效图片。返回内容: " + JSON.stringify(imageResData));
-      }
-
-      console.log('图片生成成功，supabase持久化结果:', imageUrl);
+      // 强制 imageUrl 只返回 bucket 公网url，不再返回外部链
+      console.log('图片生成成功，supabase持久化结果:', supabaseImageUrl);
 
       return new Response(JSON.stringify({
         success: true,
         model: imageModel,
         generationType,
-        imageBase64: imageBase64, // 依然返回原始 base64 防兼容
-        imageUrl: imageUrl,       // 改为返回 supabase 存储的公网链接
+        imageBase64: imageBase64, // 仅做兼容
+        imageUrl: supabaseImageUrl, // 主图地址：仅返回 bucket 的公网url
         content: "",
         fileProcessed: false,
         multimodalUsed: false
