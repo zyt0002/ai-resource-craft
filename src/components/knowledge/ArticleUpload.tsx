@@ -16,6 +16,7 @@ import { Upload, FileText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 export function ArticleUpload() {
   const { profile } = useAuth();
@@ -31,6 +32,19 @@ export function ArticleUpload() {
   const [tagList, setTagList] = useState<string[]>([]);
   const [files, setFiles] = useState<FileList | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // 获取资源分类数据
+  const { data: categories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -74,15 +88,10 @@ export function ArticleUpload() {
   };
 
   const extractTextFromDocx = async (file: File): Promise<string> => {
-    try {
-      // 对于docx文件，我们暂时返回文件名和基本信息作为内容
-      // 在实际应用中，这里需要使用专门的库来解析docx内容
-      const fileInfo = `文档名称：${file.name}\n文件大小：${(file.size / 1024).toFixed(2)} KB\n文件类型：${file.type}\n\n注意：此为docx文件，内容需要专门的解析工具来提取。请考虑将文档转换为文本格式后重新上传。`;
-      return fileInfo;
-    } catch (error) {
-      console.error('docx文件处理错误:', error);
-      throw new Error('docx文件解析失败');
-    }
+    // 对于docx文件，我们暂时返回文件名和基本信息作为内容
+    // 在实际应用中，这里需要使用专门的库来解析docx内容
+    const fileInfo = `文档名称：${file.name}\n文件大小：${(file.size / 1024).toFixed(2)} KB\n文件类型：${file.type}\n\n注意：此为docx文件，内容需要专门的解析工具来提取。请考虑将文档转换为文本格式后重新上传。`;
+    return fileInfo;
   };
 
   const handleFileUpload = async (file: File) => {
@@ -314,16 +323,26 @@ export function ArticleUpload() {
               
               <div className="space-y-2">
                 <Label htmlFor="category">分类</Label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                <Select 
+                  value={formData.category} 
+                  onValueChange={(value) => handleInputChange('category', value)}
+                  disabled={categoriesLoading}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="选择分类" />
+                    <SelectValue placeholder={categoriesLoading ? "加载中..." : "选择分类"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="技术文档">技术文档</SelectItem>
-                    <SelectItem value="产品说明">产品说明</SelectItem>
-                    <SelectItem value="用户手册">用户手册</SelectItem>
-                    <SelectItem value="培训资料">培训资料</SelectItem>
-                    <SelectItem value="其他">其他</SelectItem>
+                    {categories && categories.length > 0 ? (
+                      categories.map((category: any) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        暂无分类
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
