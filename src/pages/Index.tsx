@@ -81,16 +81,15 @@ export default function Index() {
 
   return (
     <div className="space-y-8">
-      {/* 页面头部 */}
-      <div className="flex items-center justify-between">
+      {/* 页面头部大卡片，背景浅色/深色自适应 */}
+      <div className="flex items-center justify-between rounded-2xl shadow-card px-8 py-7 mb-2 bg-card dark:bg-zinc-900 transition-colors">
         <div>
           <h1 className="text-3xl font-extrabold">欢迎使用 EduGen 智能教育资源平台 👋</h1>
           <div className="text-base text-muted-foreground mt-2">利用 AI 快速生成、管理并分享多格式教学资源</div>
         </div>
         <img src="https://placehold.co/88x88" className="rounded-full shadow" alt="用户头像" />
       </div>
-
-      {/* 统计卡片 */}
+      {/* 统计卡片（已由上轮统一为 bg-card） */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="总资源数"

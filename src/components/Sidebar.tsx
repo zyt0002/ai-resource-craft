@@ -28,7 +28,8 @@ export default function Sidebar() {
       className={cn(
         "transition-all h-[calc(100vh-4rem)] z-30 flex flex-col",
         collapsed ? "w-16" : "w-56",
-        "bg-white border-r border-gray-200 shadow-none overflow-hidden rounded-tr-xl rounded-br-xl"
+        // 统一支持暗色/浅色主题
+        "bg-card dark:bg-zinc-900 border-r border-gray-200 shadow-none overflow-hidden rounded-tr-xl rounded-br-xl"
       )}
     >
       <div className="flex flex-col mt-6 flex-1 gap-2">
@@ -72,3 +73,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+
