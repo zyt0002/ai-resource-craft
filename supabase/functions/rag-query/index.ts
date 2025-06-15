@@ -38,8 +38,26 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     )
 
-    // 1. 首先使用PostgreSQL全文检索获取相关文档
-    const { data: searchResults, error: searchError } = await supabaseClient
+    // 首先检查数据库中有多少文档
+    const { data: totalArticles, error: countError } = await supabaseClient
+      .from('knowledge_base_articles')
+      .select('id, title')
+      .eq('status', 'active')
+
+    if (countError) {
+      console.error('检查文档数量错误:', countError)
+    } else {
+      console.log(`数据库中共有 ${totalArticles?.length || 0} 篇活跃文档`)
+      if (totalArticles && totalArticles.length > 0) {
+        console.log('文档标题列表:', totalArticles.map(a => a.title))
+      }
+    }
+
+    // 1. 尝试多种搜索策略
+    let searchResults: any[] = []
+
+    // 策略1: 使用全文搜索 (websearch)
+    const { data: websearchResults, error: websearchError } = await supabaseClient
       .from('knowledge_base_articles')
       .select('id, title, content, summary, category')
       .eq('status', 'active')
@@ -49,17 +67,69 @@ serve(async (req) => {
       })
       .limit(10)
 
-    if (searchError) {
-      console.error('搜索错误:', searchError)
-      throw new Error(`Search error: ${searchError.message}`)
+    if (!websearchError && websearchResults && websearchResults.length > 0) {
+      console.log(`全文搜索找到 ${websearchResults.length} 个结果`)
+      searchResults = websearchResults
+    } else {
+      console.log('全文搜索未找到结果，尝试其他策略')
+      
+      // 策略2: 使用plainto_tsquery (更简单的文本搜索)
+      const { data: plainResults, error: plainError } = await supabaseClient
+        .from('knowledge_base_articles')
+        .select('id, title, content, summary, category')
+        .eq('status', 'active')
+        .textSearch('search_vector', query, {
+          type: 'plain',
+          config: 'simple'
+        })
+        .limit(10)
+
+      if (!plainError && plainResults && plainResults.length > 0) {
+        console.log(`简单文本搜索找到 ${plainResults.length} 个结果`)
+        searchResults = plainResults
+      } else {
+        console.log('简单文本搜索也未找到结果，尝试模糊匹配')
+        
+        // 策略3: 使用LIKE进行模糊匹配
+        const { data: likeResults, error: likeError } = await supabaseClient
+          .from('knowledge_base_articles')
+          .select('id, title, content, summary, category')
+          .eq('status', 'active')
+          .or(`title.ilike.%${query}%, content.ilike.%${query}%`)
+          .limit(10)
+
+        if (!likeError && likeResults && likeResults.length > 0) {
+          console.log(`模糊匹配找到 ${likeResults.length} 个结果`)
+          searchResults = likeResults
+        } else {
+          console.log('所有搜索策略都未找到结果')
+          
+          // 策略4: 如果还是没有结果，返回所有文档（用于测试）
+          const { data: allResults, error: allError } = await supabaseClient
+            .from('knowledge_base_articles')
+            .select('id, title, content, summary, category')
+            .eq('status', 'active')
+            .limit(5)
+
+          if (!allError && allResults && allResults.length > 0) {
+            console.log(`作为后备，获取前 ${allResults.length} 个文档`)
+            searchResults = allResults
+          }
+        }
+      }
     }
 
     if (!searchResults || searchResults.length === 0) {
-      console.log('未找到相关文档')
+      console.log('最终未找到任何相关文档')
       return new Response(
         JSON.stringify({
           answer: '抱歉，我在知识库中没有找到相关信息来回答您的问题。',
           sources: [],
+          debug: {
+            totalDocuments: totalArticles?.length || 0,
+            searchStrategiesUsed: ['websearch', 'plain', 'like', 'fallback'],
+            query: query
+          }
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -67,7 +137,7 @@ serve(async (req) => {
       )
     }
 
-    console.log(`找到 ${searchResults.length} 个相关文档`)
+    console.log(`最终找到 ${searchResults.length} 个相关文档`)
 
     // 2. 获取查询向量（使用BAAI/bge-m3模型）
     let queryEmbedding = null
@@ -154,6 +224,8 @@ serve(async (req) => {
       .map(doc => `标题: ${doc.title}\n内容: ${doc.content.substring(0, 1000)}`)
       .join('\n\n---\n\n')
 
+    console.log('构建的上下文长度:', context.length)
+
     // 5. 调用硅基流动生成答案
     const siliconFlowResponse = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
@@ -210,6 +282,13 @@ ${context}`
       JSON.stringify({
         answer,
         sources,
+        debug: {
+          totalDocuments: totalArticles?.length || 0,
+          searchResultsFound: searchResults.length,
+          finalResultsUsed: rankedResults.length,
+          hasEmbedding: !!queryEmbedding,
+          contextLength: context.length
+        }
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
