@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,9 +56,11 @@ export function GeneratedContentDisplay({
               controls
               className="max-w-full max-h-64 rounded"
               preload="metadata"
+              crossOrigin="anonymous"
               onError={(e) => {
                 console.error("视频加载失败:", e);
                 console.error("视频 URL:", generatedVideoUrl);
+                console.error("错误详情:", e.currentTarget.error);
               }}
               onLoadStart={() => {
                 console.log("开始加载视频:", generatedVideoUrl);
@@ -67,9 +68,33 @@ export function GeneratedContentDisplay({
               onCanPlay={() => {
                 console.log("视频可以播放");
               }}
+              onLoadedMetadata={() => {
+                console.log("视频元数据加载完成");
+              }}
+              onLoad={() => {
+                console.log("视频加载完成");
+              }}
             >
               您的浏览器不支持视频播放。
             </video>
+          </div>
+          
+          {/* 添加视频信息显示 */}
+          <div className="mt-2 text-sm text-gray-600">
+            <p>视频URL: {generatedVideoUrl}</p>
+            <p>状态: 视频组件已渲染</p>
+          </div>
+          
+          {/* 添加一个直接链接测试 */}
+          <div className="mt-2">
+            <a 
+              href={generatedVideoUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 underline text-sm"
+            >
+              在新窗口中打开视频链接（测试URL是否可访问）
+            </a>
           </div>
         </div>
         <div className="space-y-2">
