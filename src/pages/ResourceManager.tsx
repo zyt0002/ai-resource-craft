@@ -1,3 +1,4 @@
+
 import { ResourceCard } from "@/components/ResourceCard";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,25 +24,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
-// Add the Resource type to match usage with content field
+// 修正这里的 Resource 类型，补充 content 字段并且和数据库类型更一致
 type Resource = {
   id: string;
   title: string;
   type: string;
-  updatedAt?: string;
-  previewUrl?: string;
+  updated_at?: string;
+  thumbnail_url?: string;
   file_path?: string;
   file_type?: string;
-  content?: string; // <-- Add this field so it's allowed
+  content?: string;
 };
 
 export default function ResourceManager() {
   const { profile } = useAuth();
   const isAdmin = useIsAdmin();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [editResource, setEditResource] = useState<any>(null); // 当前正在编辑的资源
-  const [deleteResource, setDeleteResource] = useState<any>(null); // 待删除资源
-  const [previewResource, setPreviewResource] = useState<any>(null); // 预览资源
+  const [editResource, setEditResource] = useState<any>(null);
+  const [deleteResource, setDeleteResource] = useState<any>(null);
+  const [previewResource, setPreviewResource] = useState<any>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [shareResourceId, setShareResourceId] = useState<string | null>(null);
 
@@ -80,7 +81,6 @@ export default function ResourceManager() {
     }
   };
 
-  // isAdmin 不再控制页面访问限制，所有人都能访问页面
   return (
     <div className="w-full max-w-6xl mx-auto mt-8">
       <div className="flex items-center justify-between mb-6">
@@ -118,20 +118,21 @@ export default function ResourceManager() {
                     id: res.id,
                     title: res.title,
                     type: res.type,
-                    updatedAt: res.updated_at?.slice(0, 10) || "",
-                    previewUrl: res.thumbnail_url,
+                    updated_at: res.updated_at,
+                    thumbnail_url: res.thumbnail_url,
                     file_path: res.file_path,
                     file_type: res.file_type,
-                    content: res.content, // ✅ 传递本地 content
+                    content: res.content,
                   }}
                   onPreview={() => setPreviewResource({
                     id: res.id,
                     title: res.title,
                     type: res.type,
-                    previewUrl: res.thumbnail_url,
+                    updated_at: res.updated_at,
+                    thumbnail_url: res.thumbnail_url,
                     file_path: res.file_path,
                     file_type: res.file_type,
-                    content: res.content, // ✅ 传递本地 content
+                    content: res.content,
                   })}
                 />
                 {isAdmin && (
@@ -143,7 +144,6 @@ export default function ResourceManager() {
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    {/* 新增共享到房间按钮 */}
                     <Button
                       size="icon"
                       variant="secondary"
@@ -190,7 +190,6 @@ export default function ResourceManager() {
           )}
         </div>
       )}
-      {/* 仅管理员有编辑、上传、共享的 Dialog，普通用户只有看 */}
       <ResourceEditDialog
         open={Boolean(editResource)}
         onOpenChange={(v) => setEditResource(v ? editResource : null)}
