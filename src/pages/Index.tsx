@@ -81,15 +81,16 @@ export default function Index() {
 
   return (
     <div className="space-y-8">
-      {/* 页面头部大卡片，背景浅色/深色自适应 */}
-      <div className="flex items-center justify-between rounded-2xl shadow-card px-8 py-7 mb-2 bg-card dark:bg-zinc-900 transition-colors">
+      {/* 页面头部 */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold">欢迎使用 EduGen 智能教育资源平台 👋</h1>
           <div className="text-base text-muted-foreground mt-2">利用 AI 快速生成、管理并分享多格式教学资源</div>
         </div>
         <img src="https://placehold.co/88x88" className="rounded-full shadow" alt="用户头像" />
       </div>
-      {/* 统计卡片（已由上轮统一为 bg-card） */}
+
+      {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="总资源数"
@@ -123,7 +124,7 @@ export default function Index() {
 
       {/* 快速操作 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl">
-        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <Sparkles className="w-12 h-12" />
@@ -138,7 +139,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <FolderKanban className="w-12 h-12" />
@@ -153,7 +154,7 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        <Card className="p-6 bg-card dark:bg-zinc-900 text-white hover:shadow-lg transition-shadow">
+        <Card className="p-6 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
             <div className="flex items-center gap-4">
               <Database className="w-12 h-12" />
