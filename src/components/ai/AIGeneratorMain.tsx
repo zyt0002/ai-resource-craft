@@ -22,24 +22,24 @@ export function AIGeneratorMain() {
   } = useAIGeneration(title, description, setTitle, setDescription);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-      <Card className="flex flex-col">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
             AI 智能生成
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent>
           <AIGeneratorForm onGenerate={handleGenerate} loading={loading} />
         </CardContent>
       </Card>
 
-      <Card className="flex flex-col">
+      <Card>
         <CardHeader>
           <CardTitle>生成结果</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex">
+        <CardContent>
           <GeneratedContentDisplay
             generatedContent={generatedContent}
             generatedImageBase64={generatedImageBase64}

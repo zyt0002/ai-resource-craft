@@ -8,11 +8,9 @@ export default function AIGenerator() {
   const { aiGenerations } = useAIGeneration("", "", () => {}, () => {});
 
   return (
-    <div className="flex flex-col w-full max-w-6xl mx-auto mt-4 gap-6 h-[calc(100vh-8rem)]">
-      <div className="flex-1">
-        <AIGeneratorMain />
-      </div>
-      <Card className="flex-shrink-0">
+    <div className="flex flex-col w-full max-w-6xl mx-auto mt-4 gap-6">
+      <AIGeneratorMain />
+      <Card>
         <CardHeader>
           <CardTitle>最近生成记录</CardTitle>
         </CardHeader>

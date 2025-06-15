@@ -1,11 +1,10 @@
 
 import { useState } from "react";
-import { Send, Loader2, Upload, Info } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FileUploadComponent from "./FileUploadComponent";
 
 interface AIGeneratorFormProps {
@@ -177,31 +176,11 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
         </div>
       )}
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label>文件上传</Label>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs">
-                <div className="text-sm space-y-1">
-                  <p>• 上传后的文件会保持显示，直到您手动移除</p>
-                  <p>• 单个文件大小不超过 10 MB</p>
-                  <p>• 上传的文件会自动用于AI生成时的分析</p>
-                  <p>• 您可以继续上传其他文件或在生成前移除不需要的文件</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        <FileUploadComponent
-          onFileUpload={handleFileUpload}
-          maxFiles={1}
-          multiple={false}
-        />
-      </div>
+      <FileUploadComponent
+        onFileUpload={handleFileUpload}
+        maxFiles={1}
+        multiple={false}
+      />
 
       {uploadedFileName && (
         <div className="text-sm text-muted-foreground">
