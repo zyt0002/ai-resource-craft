@@ -192,14 +192,23 @@ serve(async (req) => {
 
       let imageBase64: string | null = null;
 
-      // 只关注 data[0].b64_json 或 data[0].url
+      // 优先使用 data[0].b64_json
       if (imageResData?.data?.[0]?.b64_json) {
         imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
         console.log('直接获取到 b64_json');
       } else if (imageResData?.data?.[0]?.url) {
-        // 新版 API 形式
+        // 新版 API 形式，下载url转为base64
         console.log('通过 data[0].url 获取图片');
         imageBase64 = await fetchImageBase64FromUrl(imageResData.data[0].url);
+        if (!imageBase64 && imageResData?.images?.[0]?.url) {
+          // fallback 兼容 images[0].url
+          console.log('尝试通过 images[0].url 获取图片');
+          imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
+        }
+      } else if (imageResData?.images?.[0]?.url) {
+        // fallback 兼容 images[0].url
+        console.log('只有 images[0].url，尝试直接抓取');
+        imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
       } else {
         console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
       }
