@@ -45,7 +45,7 @@ export default function AIGenerator() {
 
     setLoading(true);
     try {
-      // 多模态：将上传文件URL一并提交
+      // 保持和现有API交互逻辑相同
       const { data: result, error } = await supabase.functions.invoke('ai-generate', {
         body: {
           prompt: data.prompt,
@@ -55,28 +55,31 @@ export default function AIGenerator() {
         },
       });
 
-      // Debug: 输出 AI 返回内容
       console.log("AI raw result:", result);
 
       if (error) throw error;
 
       if (result.success) {
+        // 新增: 兼容视频生成（未来可根据API扩展渲染结果形式）
         if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
           setGeneratedContent(""); // 清空文本
           setGeneratedImageBase64(result.imageBase64 ?? null);
           setGeneratedImageUrl(result.imageUrl ?? null);
+        } else if (data.generationType === "video-generation" && result.content) {
+          setGeneratedContent(result.content);
+          setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
         } else if (typeof result.content === "string" && result.content.trim()) {
           setGeneratedContent(result.content);
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
         } else {
-          // 文本内容为空或未返回，清空
           setGeneratedContent("");
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
         }
 
-        // 保存到数据库时也一并存模型信息
+        // 保存到数据库的类型及信息可根据业务再具体细化
         const { error: saveError } = await supabase
           .from('ai_generations')
           .insert({
@@ -84,13 +87,13 @@ export default function AIGenerator() {
             prompt: data.prompt,
             generation_type: data.generationType,
             result_data: { content: result.content, model: result.model },
-            model: result.model, // 记录模型
+            model: result.model,
           });
 
         if (saveError) {
           console.error('保存生成历史失败:', saveError);
         } else {
-          refetch(); // 刷新历史记录
+          refetch();
         }
 
         toast({ title: "AI 生成成功！", description: "内容已生成，您可以进一步编辑" });
@@ -173,7 +176,6 @@ export default function AIGenerator() {
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto mt-4 gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 生成表单 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -186,7 +188,6 @@ export default function AIGenerator() {
           </CardContent>
         </Card>
 
-        {/* 生成结果区 */}
         <Card>
           <CardHeader>
             <CardTitle>生成结果</CardTitle>
@@ -205,8 +206,6 @@ export default function AIGenerator() {
           </CardContent>
         </Card>
       </div>
-
-      {/* 生成历史 */}
       <Card>
         <CardHeader>
           <CardTitle>最近生成记录</CardTitle>

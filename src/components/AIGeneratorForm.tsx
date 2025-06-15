@@ -23,7 +23,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
-  // 支持的模型列表（文本/文档/课件/视频/音频）
+  // 模型列表：保留FunAudioLLM/SenseVoiceSmall用于视频生成功能
   const modelList = [
     { value: "Qwen/Qwen2.5-7B-Instruct", label: "Qwen/Qwen2.5-7B-Instruct" },
     { value: "Tongyi-Zhiwen/QwenLong-L1-32B", label: "Tongyi-Zhiwen/QwenLong-L1-32B" },
@@ -39,6 +39,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     { value: "Qwen/Qwen3-14B", label: "Qwen/Qwen3-14B" },
     { value: "Qwen/Qwen2.5-14B-Instruct", label: "Qwen/Qwen2.5-14B-Instruct" },
     { value: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B", label: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" },
+    { value: "FunAudioLLM/SenseVoiceSmall", label: "FunAudioLLM/SenseVoiceSmall" },
   ];
 
   // 只保留Kolors 图片模型
@@ -58,13 +59,17 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
 
   const handleGenerationTypeChange = (value: string) => {
     setGenerationType(value);
-    // 切换到图片生成时，自动选Kolors
+    // 切换到视频生成时，自动选中FunAudioLLM/SenseVoiceSmall
+    if (value === "video-generation") {
+      setSelectedModel("FunAudioLLM/SenseVoiceSmall");
+    }
+    // 其它类型还原默认文本模型
+    if (value !== "video-generation" && value !== "image") {
+      setSelectedModel("Qwen/Qwen2.5-7B-Instruct");
+    }
+    // 图片生成同以往逻辑
     if (value === "image") {
       setSelectedModel("Kwai-Kolors/Kolors");
-    }
-    // 切换回文本/其它时选文本默认模型
-    if (value !== "image") {
-      setSelectedModel("Qwen/Qwen2.5-7B-Instruct");
     }
   };
 
@@ -85,7 +90,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
             <SelectItem value="courseware">课件 PPT</SelectItem>
             <SelectItem value="document">教学文档</SelectItem>
             <SelectItem value="image">教学图片</SelectItem>
-            <SelectItem value="video">视频脚本</SelectItem>
+            <SelectItem value="video-generation">视频生成</SelectItem>
             <SelectItem value="audio">音频脚本</SelectItem>
           </SelectContent>
         </Select>
@@ -100,6 +105,20 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Kwai-Kolors/Kolors">Kwai-Kolors/Kolors</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : generationType === "video-generation" ? (
+        <div className="space-y-2">
+          <Label htmlFor="video-model">视频生成模型</Label>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择视频生成模型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="FunAudioLLM/SenseVoiceSmall">
+                FunAudioLLM/SenseVoiceSmall
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
