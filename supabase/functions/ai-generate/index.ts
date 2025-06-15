@@ -1,6 +1,14 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// ===== 新增：引入 Supabase 客户端，用于上传图片到 storage =====
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+
+const SUPABASE_URL = "https://ncgfsntvrieiuynyqsgr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jZ2ZzbnR2cmllaXV5bnlxc2dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4OTg5NTMsImV4cCI6MjA2NTQ3NDk1M30._UBhi7Ht73R1NruvOJROkkzjpYC40s3C4F_O7jIFYnI";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// =======================================
+
 const SILICONFLOW_API_KEY = Deno.env.get('SILICONFLOW_API_KEY');
 
 const corsHeaders = {
@@ -156,6 +164,62 @@ async function getFileContent(fileUrl: string): Promise<string> {
   }
 }
 
+// 新增辅助函数：上传图片到 Supabase ai-images bucket，返回公网URL
+async function uploadImageToAiImages(imageBase64: string): Promise<string | null> {
+  if (!imageBase64.startsWith("data:image/")) return null;
+  try {
+    // 提取 data:image/png;base64,XXXX 部分
+    const matches = imageBase64.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!matches) return null;
+    const ext = matches[1] || "png";
+    const imgData = matches[2];
+    const buffer = Uint8Array.from(atob(imgData), c => c.charCodeAt(0));
+    // 文件名：ai-image-时间戳-随机.[ext]
+    const filename = `ai-image-${Date.now()}-${Math.random().toString(16).slice(2,8)}.${ext}`;
+    // 上传到 storage
+    const { data, error } = await supabase.storage
+      .from("ai-images")
+      .upload(filename, buffer, { contentType: `image/${ext}` });
+    if (error) {
+      console.error("[ai-generate] 上传图片到 ai-images 失败：", error);
+      return null;
+    }
+    // 获取图片公网链接
+    const { data: urlData } = supabase.storage.from("ai-images").getPublicUrl(filename);
+    return urlData?.publicUrl || null;
+  } catch (e) {
+    console.error("[ai-generate] uploadImageToAiImages error:", e);
+    return null;
+  }
+}
+
+// 新增辅助函数：通过远程图片 url 上传到 Supabase 并返回公网链接
+async function uploadImageFromUrl(imageUrl: string): Promise<string | null> {
+  try {
+    const resp = await fetch(imageUrl);
+    if (!resp.ok) throw new Error("下载图片失败: " + resp.statusText);
+    // 仅识别 png/jpg/jpeg/webp/gif
+    const contentType = resp.headers.get("content-type") || "image/png";
+    let ext = "png";
+    if (contentType.includes("jpeg")) ext = "jpg";
+    else if (contentType.includes("webp")) ext = "webp";
+    else if (contentType.includes("gif")) ext = "gif";
+    else if (contentType.includes("png")) ext = "png";
+    const buffer = new Uint8Array(await resp.arrayBuffer());
+    const filename = `ai-image-${Date.now()}-${Math.random().toString(16).slice(2,8)}.${ext}`;
+    const { data, error } = await supabase.storage.from("ai-images").upload(filename, buffer, { contentType });
+    if (error) {
+      console.error("[ai-generate] uploadImageFromUrl 上传失败：", error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from("ai-images").getPublicUrl(filename);
+    return urlData?.publicUrl || null;
+  } catch (e) {
+    console.error("[ai-generate] uploadImageFromUrl 异常：", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -196,18 +260,33 @@ serve(async (req) => {
       // 优先返回 base64，如有，其次返回 url
       let imageBase64: string | null = null;
       let imageUrl: string | null = null;
+      let savedUrl: string | null = null;
 
       // 兼容不同API返回格式
       if (imageResData?.data?.[0]?.b64_json) {
         imageBase64 = `data:image/png;base64,${imageResData.data[0].b64_json}`;
         console.log('直接获取到 b64_json');
+        // 新增：直接存 supabase，然后拿公网地址
+        savedUrl = await uploadImageToAiImages(imageBase64);
+        if (savedUrl) {
+          imageUrl = savedUrl; // 直接用 supabase 的 url 作为主图片地址
+        } else {
+          imageUrl = null;
+        }
       } else if (imageResData?.data?.[0]?.url) {
-        // 若无base64，直接返回图片公网url
+        // 若无base64，直接返回图片公网url（仍需保存一份到 supabase）
         imageUrl = imageResData.data[0].url;
-        console.log('使用 data[0].url，直接返回图片url');
+        console.log('尝试通过url抓取并上传图片');
+        savedUrl = await uploadImageFromUrl(imageUrl);
+        if (savedUrl) {
+          imageUrl = savedUrl;
+        }
       } else if (imageResData?.images?.[0]?.url) {
         imageUrl = imageResData.images[0].url;
-        console.log('使用 images[0].url，直接返回图片url');
+        savedUrl = await uploadImageFromUrl(imageUrl);
+        if (savedUrl) {
+          imageUrl = savedUrl;
+        }
       } else {
         console.error("未能识别图片API返回的数据结构:", JSON.stringify(imageResData));
       }
@@ -216,14 +295,14 @@ serve(async (req) => {
         throw new Error("图片API未返回有效图片。返回内容: " + JSON.stringify(imageResData));
       }
 
-      console.log('图片生成成功，imageBase64:', !!imageBase64, 'imageUrl:', imageUrl);
+      console.log('图片生成成功，supabase持久化结果:', imageUrl);
 
       return new Response(JSON.stringify({
         success: true,
         model: imageModel,
         generationType,
-        imageBase64: imageBase64, // 保持兼容
-        imageUrl: imageUrl,
+        imageBase64: imageBase64, // 依然返回原始 base64 防兼容
+        imageUrl: imageUrl,       // 改为返回 supabase 存储的公网链接
         content: "",
         fileProcessed: false,
         multimodalUsed: false
