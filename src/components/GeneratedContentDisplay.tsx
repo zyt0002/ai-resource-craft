@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +35,18 @@ export function GeneratedContentDisplay({
   onDescriptionChange,
   onSaveAsResource,
 }: GeneratedContentDisplayProps) {
+  
+  // 添加调试信息
+  console.log("GeneratedContentDisplay 接收到的 props:", {
+    generatedContent: !!generatedContent,
+    generatedImageBase64: !!generatedImageBase64,
+    generatedImageUrl: !!generatedImageUrl,
+    generatedVideoUrl: generatedVideoUrl
+  });
+
   // 视频生成结果渲染
   if (generatedVideoUrl) {
+    console.log("渲染视频组件，URL:", generatedVideoUrl);
     return (
       <div className="space-y-4">
         <div>
@@ -46,6 +57,16 @@ export function GeneratedContentDisplay({
               controls
               className="max-w-full max-h-64 rounded"
               preload="metadata"
+              onError={(e) => {
+                console.error("视频加载失败:", e);
+                console.error("视频 URL:", generatedVideoUrl);
+              }}
+              onLoadStart={() => {
+                console.log("开始加载视频:", generatedVideoUrl);
+              }}
+              onCanPlay={() => {
+                console.log("视频可以播放");
+              }}
             >
               您的浏览器不支持视频播放。
             </video>

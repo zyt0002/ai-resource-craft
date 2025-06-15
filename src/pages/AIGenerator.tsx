@@ -63,6 +63,7 @@ export default function AIGenerator() {
       if (result.success) {
         // 处理图片生成
         if (data.generationType === "image" && (result.imageBase64 || result.imageUrl)) {
+          console.log("处理图片生成结果");
           setGeneratedContent(""); // 清空文本
           setGeneratedImageBase64(result.imageBase64 ?? null);
           setGeneratedImageUrl(result.imageUrl ?? null);
@@ -70,18 +71,22 @@ export default function AIGenerator() {
         } 
         // 处理视频生成
         else if (data.generationType === "video-generation" && result.videoUrl) {
+          console.log("处理视频生成结果，videoUrl:", result.videoUrl);
           setGeneratedContent("");
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
           setGeneratedVideoUrl(result.videoUrl);
+          console.log("设置后的 generatedVideoUrl state:", result.videoUrl);
         }
         // 处理文本内容生成
         else if (typeof result.content === "string" && result.content.trim()) {
+          console.log("处理文本内容生成");
           setGeneratedContent(result.content);
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
           setGeneratedVideoUrl(null);
         } else {
+          console.log("未匹配到任何生成类型，清空所有状态");
           setGeneratedContent("");
           setGeneratedImageBase64(null);
           setGeneratedImageUrl(null);
@@ -184,6 +189,9 @@ export default function AIGenerator() {
       });
     }
   };
+
+  // 添加调试信息
+  console.log("当前状态 - generatedVideoUrl:", generatedVideoUrl);
 
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto mt-4 gap-6">
