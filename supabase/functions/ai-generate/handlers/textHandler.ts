@@ -34,7 +34,7 @@ export async function handleTextGeneration(
 
   // 系统提示
   const systemPrompts = {
-    courseware: "你是专业的教学内容生成助手。请根据用户提供的信息和文件内容，生成高质量的教学课件内容。如果用户上传了文件但系统无法解析，请根据用户的描述和需求生成相应内容。",
+    courseware: "你是专业的教学内容生成助手。请根据用户提供的信息和文件内容，生成高质量的教学课件内容。如果用户上传了图片，请详细分析图片内容并结合用户需求生成相应的教学资料。",
     image: "你是AI图像内容建议助手。请以用户需求为主，可适当补充优化建议。",
     document: "你是教学文档生成助手。请根据用户的需求和提供的材料，生成结构清晰、内容丰富的教学文档。",
     video: "你是视频脚本生成助手。请根据用户需求生成适合的视频脚本内容。",
@@ -52,46 +52,63 @@ export async function handleTextGeneration(
   // 处理用户消息和文件
   if (fileUrl && multimodalModels.includes(targetModel)) {
     console.log('使用多模态模型处理文件:', targetModel);
-    const response = await fetch(fileUrl, { method: 'HEAD' });
-    const contentType = response.headers.get('content-type') || '';
     
-    const urlParts = fileUrl.split('/');
-    const fileName = urlParts[urlParts.length - 1] || '';
-    
-    if (isImageFile(contentType, fileName)) {
-      console.log('处理图片文件，使用多模态格式');
-      const imageBase64 = await imageToBase64(fileUrl);
-      if (imageBase64) {
-        messages.push({
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: prompt + '\n\n请分析上传的图片内容，并根据图片生成相关的教学资源。'
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageBase64
+    try {
+      const response = await fetch(fileUrl, { method: 'HEAD' });
+      const contentType = response.headers.get('content-type') || '';
+      
+      const urlParts = fileUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1] || '';
+      
+      console.log('文件类型:', contentType, '文件名:', fileName);
+      
+      if (isImageFile(contentType, fileName)) {
+        console.log('检测到图片文件，开始转换为base64');
+        const imageBase64 = await imageToBase64(fileUrl);
+        
+        if (imageBase64) {
+          console.log('图片base64转换成功，长度:', imageBase64.length);
+          messages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt || '请分析这张图片的内容，并根据图片生成相关的教学资源。'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageBase64
+                }
               }
-            }
-          ]
-        });
+            ]
+          });
+          console.log('已构建多模态消息格式');
+        } else {
+          console.log('图片base64转换失败，使用文本描述');
+          const fileContent = await getFileContent(fileUrl);
+          messages.push({
+            role: 'user',
+            content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。`
+          });
+        }
       } else {
+        console.log('非图片文件，使用文本处理');
         const fileContent = await getFileContent(fileUrl);
         messages.push({
           role: 'user',
-          content: prompt + `\n\n文件处理信息:\n${fileContent}\n\n请根据上述信息和用户需求生成相关内容。`
+          content: prompt + `\n\n文件内容:\n${fileContent}\n\n请根据上述文件内容和用户需求生成相关内容。`
         });
       }
-    } else {
-      const fileContent = await getFileContent(fileUrl);
+    } catch (error) {
+      console.error('文件处理失败:', error);
       messages.push({
         role: 'user',
-        content: prompt + `\n\n文件内容:\n${fileContent}\n\n请根据上述文件内容和用户需求生成相关内容。`
+        content: prompt + `\n\n文件处理失败: ${error.message}。请根据用户需求生成相关内容。`
       });
     }
   } else if (fileUrl) {
+    console.log('使用非多模态模型处理文件');
     const fileContent = await getFileContent(fileUrl);
     messages.push({
       role: 'user',
@@ -104,7 +121,9 @@ export async function handleTextGeneration(
     });
   }
 
-  console.log('发送到API的消息:', JSON.stringify(messages, null, 2));
+  console.log('发送到API的消息数量:', messages.length);
+  console.log('使用模型:', targetModel);
+  console.log('是否包含图片:', messages.some(msg => Array.isArray(msg.content)));
 
   const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
     method: 'POST',
@@ -121,7 +140,9 @@ export async function handleTextGeneration(
   });
 
   if (!response.ok) {
-    throw new Error(`硅基流动 API 错误: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('API调用失败:', response.status, errorText);
+    throw new Error(`硅基流动 API 错误: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();

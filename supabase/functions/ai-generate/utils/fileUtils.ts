@@ -19,16 +19,31 @@ export function isTextFile(contentType: string, fileName: string): boolean {
 // 将图片转换为base64
 export async function imageToBase64(fileUrl: string): Promise<string | null> {
   try {
+    console.log('开始获取图片:', fileUrl);
     const response = await fetch(fileUrl);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.error('获取图片失败:', response.status, response.statusText);
+      return null;
+    }
     
     const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    console.log('图片大小:', arrayBuffer.byteLength, 'bytes');
     
-    return `data:${contentType};base64,${base64}`;
+    // 转换为base64
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const dataUrl = `data:${contentType};base64,${base64}`;
+    
+    console.log('图片base64转换成功，数据URL长度:', dataUrl.length);
+    return dataUrl;
   } catch (error) {
-    console.error('图片转换失败:', error);
+    console.error('图片转换base64失败:', error);
     return null;
   }
 }
