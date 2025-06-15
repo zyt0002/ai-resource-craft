@@ -73,8 +73,81 @@ export function ArticleUpload() {
     return { title, content: cleanContent, summary };
   };
 
+  const extractTextFromDocx = async (file: File): Promise<string> => {
+    try {
+      // 对于docx文件，我们暂时返回文件名和基本信息作为内容
+      // 在实际应用中，这里需要使用专门的库来解析docx内容
+      const fileInfo = `文档名称：${file.name}\n文件大小：${(file.size / 1024).toFixed(2)} KB\n文件类型：${file.type}\n\n注意：此为docx文件，内容需要专门的解析工具来提取。请考虑将文档转换为文本格式后重新上传。`;
+      return fileInfo;
+    } catch (error) {
+      console.error('docx文件处理错误:', error);
+      throw new Error('docx文件解析失败');
+    }
+  };
+
   const handleFileUpload = async (file: File) => {
     return new Promise<void>((resolve, reject) => {
+      console.log('开始处理文件:', { 
+        fileName: file.name, 
+        fileSize: file.size,
+        fileType: file.type 
+      });
+
+      // 检查文件类型
+      const allowedTypes = [
+        'text/plain',
+        'text/markdown',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword'
+      ];
+
+      const fileExtension = file.name.toLowerCase().split('.').pop();
+      const allowedExtensions = ['txt', 'md', 'csv', 'docx', 'doc'];
+
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension || '')) {
+        console.error('不支持的文件类型:', { type: file.type, extension: fileExtension });
+        reject(new Error(`不支持的文件类型。支持的格式：${allowedExtensions.join(', ')}`));
+        return;
+      }
+
+      // 处理docx文件
+      if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+          fileExtension === 'docx') {
+        extractTextFromDocx(file).then(async (content) => {
+          try {
+            const { title, content: processedContent, summary } = processFileContent(content, file.name);
+            
+            const { error } = await supabase
+              .from('knowledge_base_articles')
+              .insert({
+                title,
+                content: processedContent,
+                summary,
+                tags: tagList.length > 0 ? tagList : null,
+                category: formData.category || null,
+                source_type: 'file_upload',
+                file_type: file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                created_by: profile?.id,
+                status: 'active',
+              });
+
+            if (error) {
+              console.error('数据库插入错误:', error);
+              throw error;
+            }
+            
+            console.log('docx文件保存成功:', title);
+            resolve();
+          } catch (error) {
+            console.error('docx文件处理错误:', error);
+            reject(error);
+          }
+        }).catch(reject);
+        return;
+      }
+
+      // 处理文本文件
       const reader = new FileReader();
       
       reader.onload = async (e) => {
@@ -85,7 +158,6 @@ export function ArticleUpload() {
           if (typeof result === 'string') {
             content = result;
           } else if (result instanceof ArrayBuffer) {
-            // 如果是二进制数据，尝试解码为UTF-8
             const decoder = new TextDecoder('utf-8', { fatal: false });
             content = decoder.decode(result);
           }
@@ -126,12 +198,11 @@ export function ArticleUpload() {
         reject(new Error('文件读取失败'));
       };
       
-      // 优先使用 readAsText 并指定编码
+      // 尝试读取文件
       try {
         reader.readAsText(file, 'UTF-8');
       } catch (error) {
         console.error('读取文件时出错:', error);
-        // 如果 readAsText 失败，尝试 readAsArrayBuffer
         reader.readAsArrayBuffer(file);
       }
     });
