@@ -84,10 +84,10 @@ export default function Index() {
       {/* 页面头部 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold">欢迎使用 EduGen 智能教育资源平台 👋</h1>
+          <h1 className="text-3xl font-extrabold">欢迎使用Loongson EduGen龙架构智能教育资源平台 👋</h1>
           <div className="text-base text-muted-foreground mt-2">利用 AI 快速生成、管理并分享多格式教学资源</div>
         </div>
-        <img src="https://placehold.co/88x88" className="rounded-full shadow" alt="用户头像" />
+        <img src="../src/assets/img/logo.png" style={{ width: '100px', height: '100px' }} className="rounded-full shadow" alt="平台LOGO" />
       </div>
 
       {/* 统计卡片 */}
