@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 设置认证状态监听器
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth状态变化:', event, session ? '已登录' : '未登录');
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -64,25 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    try {
-      console.log('正在退出登录...');
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('退出登录失败:', error);
-        throw error;
-      }
-      console.log('退出登录成功');
-      // 清理本地状态
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-      // 强制跳转到登录页
-      window.location.href = '/auth';
-    } catch (error) {
-      console.error('退出登录过程中出错:', error);
-      // 即使出错也强制跳转
-      window.location.href = '/auth';
-    }
+    await supabase.auth.signOut();
   };
 
   return (
