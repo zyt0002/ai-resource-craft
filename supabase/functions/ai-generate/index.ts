@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -70,15 +69,19 @@ async function imageToBase64(fileUrl: string): Promise<string | null> {
 
 // 将图片 URL 下载并转为 base64
 async function fetchImageBase64FromUrl(url: string): Promise<string | null> {
+  // 非递归实现：只处理给定url
   try {
     const resp = await fetch(url);
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      console.error('fetchImageBase64FromUrl 请求失败，status:', resp.status, url);
+      return null;
+    }
     const buf = await resp.arrayBuffer();
     const mime = resp.headers.get('content-type') || 'image/jpeg';
     const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
     return `data:${mime};base64,${b64}`;
   } catch (e) {
-    console.error('下载图片转 base64 失败:', e);
+    console.error('下载图片转 base64 失败:', e, url);
     return null;
   }
 }
@@ -200,11 +203,6 @@ serve(async (req) => {
         // 新版 API 形式，下载url转为base64
         console.log('通过 data[0].url 获取图片');
         imageBase64 = await fetchImageBase64FromUrl(imageResData.data[0].url);
-        if (!imageBase64 && imageResData?.images?.[0]?.url) {
-          // fallback 兼容 images[0].url
-          console.log('尝试通过 images[0].url 获取图片');
-          imageBase64 = await fetchImageBase64FromUrl(imageResData.images[0].url);
-        }
       } else if (imageResData?.images?.[0]?.url) {
         // fallback 兼容 images[0].url
         console.log('只有 images[0].url，尝试直接抓取');
