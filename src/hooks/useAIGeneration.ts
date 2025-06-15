@@ -140,6 +140,8 @@ export function useAIGeneration(
 
         const successMessage = data.generationType === "speech-to-text" 
           ? "语音转文字成功！" 
+          : data.generationType === "video-generation"
+          ? "视频生成成功！"
           : "AI 生成成功！";
         toast({ title: successMessage, description: "内容已生成，您可以进一步编辑" });
       } else {

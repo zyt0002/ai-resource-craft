@@ -7,10 +7,8 @@ export async function handleVideoGeneration(prompt: string, model: string, fileU
   console.log(`[AI-Generate] 提示词: ${prompt}`);
   console.log(`[AI-Generate] 文件URL: ${fileUrl}`);
   
-  const videoModel = "Wan-AI/Wan2.1-T2V-14B";
-  
   const postBody: Record<string, any> = {
-    model: videoModel,
+    model,
     prompt,
     image_size: "1280x720",
   };
@@ -49,10 +47,10 @@ export async function handleVideoGeneration(prompt: string, model: string, fileU
   
   console.log('已提交视频生成请求，requestId:', requestId);
 
-  // Step 2: 轮询取视频链接（最多尝试8分钟，每10秒查询一次）
+  // Step 2: 轮询取视频链接（最多尝试10分钟，每10秒查询一次）
   let videoUrl: string | null = null;
   let attempts = 0;
-  const maxAttempts = 48; // 8分钟 * 6次/分钟 = 48次
+  const maxAttempts = 60; // 10分钟 * 6次/分钟 = 60次
   const pollDelay = 10000; // 10秒
   let statusDetail: string = "";
 
@@ -99,7 +97,7 @@ export async function handleVideoGeneration(prompt: string, model: string, fileU
     console.log('视频生成成功，URL:', videoUrl);
     return new Response(JSON.stringify({
       success: true,
-      model: videoModel,
+      model,
       generationType: "video-generation",
       videoUrl,
       content: "",
