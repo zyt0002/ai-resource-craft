@@ -189,6 +189,71 @@ export type Database = {
           },
         ]
       }
+      knowledge_base_articles: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          search_vector: unknown | null
+          source_type: string | null
+          source_url: string | null
+          status: string | null
+          summary: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          search_vector?: unknown | null
+          source_type?: string | null
+          source_url?: string | null
+          status?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          search_vector?: unknown | null
+          source_type?: string | null
+          source_url?: string | null
+          status?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_articles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           id: string

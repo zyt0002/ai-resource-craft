@@ -13,6 +13,7 @@ import ResourceManager from "./pages/ResourceManager";
 import ResourceCategories from "./pages/ResourceCategories";
 import Collaborate from "./pages/Collaborate";
 import Settings from "./pages/Settings";
+import KnowledgeBase from "./pages/KnowledgeBase";
 import Auth from "./pages/Auth";
 import Layout from "@/components/Layout";
 
@@ -38,6 +39,7 @@ const App = () => (
                       <Route path="/resources" element={<ResourceManager />} />
                       <Route path="/categories" element={<ResourceCategories />} />
                       <Route path="/collaborate" element={<Collaborate />} />
+                      <Route path="/knowledge-base" element={<KnowledgeBase />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
