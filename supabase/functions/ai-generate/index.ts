@@ -5,6 +5,7 @@ import { handleImageGeneration } from "./handlers/imageHandler.ts";
 import { handleVideoGeneration } from "./handlers/videoHandler.ts";
 import { handleTextGeneration } from "./handlers/textHandler.ts";
 import { handleAudioGeneration } from "./handlers/audioHandler.ts";
+import { handleSpeechToText } from "./handlers/speechToTextHandler.ts";
 import { corsHeaders } from "./utils/cors.ts";
 
 const SILICONFLOW_API_KEY = Deno.env.get('SILICONFLOW_API_KEY');
@@ -39,6 +40,10 @@ serve(async (req) => {
       case "audio":
         console.log('路由到音频生成处理器');
         return await handleAudioGeneration(prompt, voice, SILICONFLOW_API_KEY);
+      
+      case "speech-to-text":
+        console.log('路由到语音转文字处理器');
+        return await handleSpeechToText(fileUrl, model, SILICONFLOW_API_KEY);
       
       default:
         console.log('路由到文本生成处理器');

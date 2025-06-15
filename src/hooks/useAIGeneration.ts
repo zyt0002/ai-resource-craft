@@ -40,7 +40,13 @@ export function useAIGeneration(
     fileUrl: string | null;
     voice?: string;
   }) => {
-    if (!data.prompt.trim()) {
+    // 对于语音转文字，不需要prompt，只需要文件
+    if (data.generationType === "speech-to-text") {
+      if (!data.fileUrl) {
+        toast({ title: "请上传音频文件", variant: "destructive" });
+        return;
+      }
+    } else if (!data.prompt.trim()) {
       toast({ title: "请输入生成提示", variant: "destructive" });
       return;
     }
@@ -62,8 +68,17 @@ export function useAIGeneration(
       if (error) throw error;
 
       if (result.success) {
+        // 处理语音转文字结果
+        if (data.generationType === "speech-to-text" && result.content) {
+          console.log("处理语音转文字结果");
+          setGeneratedContent(result.content);
+          setGeneratedImageBase64(null);
+          setGeneratedImageUrl(null);
+          setGeneratedVideoUrl(null);
+          setGeneratedAudioBase64(null);
+        }
         // 处理音频生成
-        if (data.generationType === "audio" && result.audioBase64) {
+        else if (data.generationType === "audio" && result.audioBase64) {
           console.log("处理音频生成结果");
           setGeneratedContent("");
           setGeneratedImageBase64(null);
@@ -111,7 +126,7 @@ export function useAIGeneration(
           .from('ai_generations')
           .insert({
             user_id: profile?.id,
-            prompt: data.prompt,
+            prompt: data.prompt || "语音转文字",
             generation_type: data.generationType,
             result_data: { content: result.content, model: result.model },
             model: result.model,
@@ -123,7 +138,10 @@ export function useAIGeneration(
           refetch();
         }
 
-        toast({ title: "AI 生成成功！", description: "内容已生成，您可以进一步编辑" });
+        const successMessage = data.generationType === "speech-to-text" 
+          ? "语音转文字成功！" 
+          : "AI 生成成功！";
+        toast({ title: successMessage, description: "内容已生成，您可以进一步编辑" });
       } else {
         throw new Error(result.error);
       }

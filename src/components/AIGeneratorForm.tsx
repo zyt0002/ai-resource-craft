@@ -55,8 +55,12 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
     if (value === "video-generation") {
       setSelectedModel("FunAudioLLM/SenseVoiceSmall");
     }
+    // 语音转文字功能使用SenseVoiceSmall模型
+    if (value === "speech-to-text") {
+      setSelectedModel("FunAudioLLM/SenseVoiceSmall");
+    }
     // 其它类型还原默认文本模型
-    if (value !== "video-generation" && value !== "image") {
+    if (value !== "video-generation" && value !== "image" && value !== "speech-to-text") {
       setSelectedModel("Qwen/Qwen2.5-7B-Instruct");
     }
     // 图片生成同以往逻辑
@@ -84,6 +88,7 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
             <SelectItem value="image">教学图片</SelectItem>
             <SelectItem value="video-generation">视频生成</SelectItem>
             <SelectItem value="audio">语音生成</SelectItem>
+            <SelectItem value="speech-to-text">语音转文字</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -106,6 +111,20 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
           <Select value={selectedModel} onValueChange={setSelectedModel}>
             <SelectTrigger>
               <SelectValue placeholder="请选择视频生成模型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="FunAudioLLM/SenseVoiceSmall">
+                FunAudioLLM/SenseVoiceSmall
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      ) : generationType === "speech-to-text" ? (
+        <div className="space-y-2">
+          <Label htmlFor="speech-model">语音转文字模型</Label>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger>
+              <SelectValue placeholder="请选择语音转文字模型" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="FunAudioLLM/SenseVoiceSmall">
@@ -170,17 +189,22 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="prompt">生成提示</Label>
+        <Label htmlFor="prompt">
+          {generationType === "speech-to-text" ? "备注信息（可选）" : "生成提示"}
+        </Label>
         <Textarea
           id="prompt"
           placeholder={
-            generationType === "audio" 
+            generationType === "speech-to-text"
+              ? "请上传音频文件进行语音转文字，此处可添加备注信息..."
+            : generationType === "audio" 
               ? "请输入要转换为语音的文本内容..." 
               : "请描述您想要生成的内容，例如：生成一份关于植物光合作用的小学科学课件..."
           }
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={4}
+          required={generationType !== "speech-to-text"}
         />
       </div>
 
@@ -188,12 +212,12 @@ export function AIGeneratorForm({ onGenerate, loading }: AIGeneratorFormProps) {
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            生成中...
+            {generationType === "speech-to-text" ? "转换中..." : "生成中..."}
           </>
         ) : (
           <>
             <Send className="w-4 h-4 mr-2" />
-            开始生成
+            {generationType === "speech-to-text" ? "开始转换" : "开始生成"}
           </>
         )}
       </Button>
