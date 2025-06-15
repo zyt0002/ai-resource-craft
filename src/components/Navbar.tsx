@@ -15,6 +15,15 @@ export default function Navbar() {
   const { profile, signOut } = useAuth();
   const { data: platform, isLoading } = usePlatformSettings();
 
+  const handleSignOut = async () => {
+    console.log('点击退出登录按钮');
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('退出登录失败:', error);
+    }
+  };
+
   return (
     <header
       className={cn(
@@ -41,7 +50,10 @@ export default function Navbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-white shadow-xl border border-gray-100">
-            <DropdownMenuItem onClick={signOut} className="text-red-600 font-semibold hover:bg-red-50">
+            <DropdownMenuItem 
+              onClick={handleSignOut} 
+              className="text-red-600 font-semibold hover:bg-red-50 cursor-pointer"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               退出登录
             </DropdownMenuItem>
