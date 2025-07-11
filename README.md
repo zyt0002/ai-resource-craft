@@ -1,4 +1,4 @@
-  # Welcome to Loongson Edu Resource generation platform's codebase
+  # Welcome to Loongson Edu Resource Generation Platform's codebase
 
 
 
